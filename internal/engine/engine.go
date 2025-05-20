@@ -41,7 +41,11 @@ func (s *System) Run(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	defer r.Body.Close()
+	defer func() {
+		if err := r.Body.Close(); err != nil {
+			_ = logs.Errorf("error closing body: %v", err)
+		}
+	}()
 
 	// Optionally, you can validate the JSON here if needed
 	var policy Policy
@@ -72,7 +76,11 @@ func (s *System) Run(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			_ = logs.Errorf("error closing body: %v", err)
+		}
+	}()
 	w.WriteHeader(resp.StatusCode)
 	w.Header().Set("Content-Type", "application/json")
 	if _, err := io.Copy(w, resp.Body); err != nil {
@@ -83,8 +91,8 @@ func (s *System) Run(w http.ResponseWriter, r *http.Request) {
 
 func (s *System) RunPolicy(w http.ResponseWriter, r *http.Request) {
 	s.Context = r.Context()
-	policyID := r.PathValue("policyID")
-	logs.Infof("policy: %s", policyID)
+	policyId := r.PathValue("policyId")
+	logs.Infof("policy: %s", policyId)
 
 	w.WriteHeader(http.StatusNotImplemented)
 }
