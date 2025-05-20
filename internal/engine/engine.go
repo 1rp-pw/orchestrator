@@ -54,7 +54,9 @@ func (s *System) Run(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req, err := http.NewRequestWithContext(s.Context, "POST", fmt.Sprintf("%s", s.Config.ProjectProperties["engine_address"]), bytes.NewBuffer(bodyBytes))
+	eurl := s.Config.ProjectProperties["engine_address"]
+	logs.Infof("engine url: %s", eurl)
+	req, err := http.NewRequestWithContext(s.Context, "POST", fmt.Sprintf("%s", eurl), bytes.NewBuffer(bodyBytes))
 	if err != nil {
 		_ = logs.Errorf("Error building http request: %s", err)
 		w.WriteHeader(http.StatusBadRequest)
