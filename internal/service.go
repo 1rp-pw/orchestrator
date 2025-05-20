@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"github.com/1rp-pw/orchestrator/internal/engine"
+	"github.com/1rp-pw/orchestrator/internal/storage"
 	"github.com/bugfixes/go-bugfixes/logs"
 	"github.com/bugfixes/go-bugfixes/middleware"
 	ConfigBuilder "github.com/keloran/go-config"
@@ -34,7 +35,13 @@ func (s *Service) startHTTP(errChan chan error) {
 
 	// run the policy on the engine
 	mux.HandleFunc("POST /run", engine.NewSystem(s.Config).Run)
-	mux.HandleFunc("POST /run/{policyID}", engine.NewSystem(s.Config).RunPolicy)
+	mux.HandleFunc("POST /run/{policyId}", engine.NewSystem(s.Config).RunPolicy)
+
+	// policy storage
+	mux.HandleFunc("POST /policy", storage.NewSystem(s.Config).CreatePolicy)
+	mux.HandleFunc("PUT /policy/{policyId}", storage.NewSystem(s.Config).UpdatePolicy)
+	mux.HandleFunc("DELETE /policy/{policyId}", storage.NewSystem(s.Config).DeletePolicy)
+	mux.HandleFunc("GET /policy/{policyId}", storage.NewSystem(s.Config).GetPolicy)
 
 	// flow system
 	mux.HandleFunc("POST /flow", func(w http.ResponseWriter, r *http.Request) {
