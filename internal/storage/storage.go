@@ -6,9 +6,9 @@ import (
 	"fmt"
 	policymodel "github.com/1rp-pw/orchestrator/internal/policy"
 	"github.com/bugfixes/go-bugfixes/logs"
-	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	"github.com/google/uuid"
 	ConfigBuilder "github.com/keloran/go-config"
+	"github.com/segmentio/kafka-go"
 	"io"
 	"net/http"
 	"time"
@@ -37,6 +37,7 @@ func (s *System) CreatePolicy(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		_ = logs.Errorf("failed to create policy id: %v", err)
 		http.Error(w, "failed to create policy", http.StatusInternalServerError)
+		return
 	}
 
 	bodyBytes, err := io.ReadAll(r.Body)
@@ -59,48 +60,42 @@ func (s *System) CreatePolicy(w http.ResponseWriter, r *http.Request) {
 	policy.ID = uid.String()
 	policy.CreatedAt = time.Now()
 
-	p, err := kafka.NewProducer(&kafka.ConfigMap{
-		"bootstrap.servers": s.Config.ProjectProperties["kafka_host"],
-	})
-	if err != nil {
-		_ = logs.Errorf("failed to create producer: %v", err)
+	kafkaHost, ok := s.Config.ProjectProperties["kafka_host"].(string)
+	if !ok {
+		_ = logs.Error("kafka_host config missing or invalid")
 		http.Error(w, "failed to create policy", http.StatusInternalServerError)
-	}
-	defer p.Close()
-	go func() {
-		for e := range p.Events() {
-			switch ev := e.(type) {
-			case *kafka.Message:
-				if ev.TopicPartition.Error != nil {
-					_ = logs.Errorf("Delivery failed: %v", ev.TopicPartition)
-				}
-			}
-		}
-	}()
-
-	data, err := json.Marshal(policy)
-	if err != nil {
-		_ = logs.Errorf("failed to create policy: %v", err)
-		http.Error(w, "failed to create policy", http.StatusInternalServerError)
+		return
 	}
 
 	topic := fmt.Sprintf("policy-%s", uid.String())
-	if err := p.Produce(&kafka.Message{
-		TopicPartition: kafka.TopicPartition{
-			Topic:     &topic,
-			Partition: 0,
-		},
-		Value: data,
-	}, nil); err != nil {
-		_ = logs.Errorf("failed to create policy: %v", err)
+
+	writer, err := kafka.DialLeader(r.Context(), "tcp", kafkaHost, topic, 0)
+	if err != nil {
+		_ = logs.Errorf("failed to connect to kafka: %v", err)
 		http.Error(w, "failed to create policy", http.StatusInternalServerError)
 	}
 
-	if err := json.NewEncoder(w).Encode(&policy); err != nil {
-		_ = logs.Errorf("failed to create policy: %v", err)
+	data, err := json.Marshal(policy)
+	if err != nil {
+		_ = logs.Errorf("failed to marshal policy: %v", err)
 		http.Error(w, "failed to create policy", http.StatusInternalServerError)
+		return
 	}
-	p.Flush(15 * 1000)
+
+	if _, err = writer.WriteMessages(kafka.Message{
+		Key:   []byte(policy.ID),
+		Value: data,
+	}); err != nil {
+		_ = logs.Errorf("failed to write message: %v", err)
+		http.Error(w, "failed to create policy", http.StatusInternalServerError)
+		return
+	}
+
+	if err := json.NewEncoder(w).Encode(&policy); err != nil {
+		_ = logs.Errorf("failed to encode response: %v", err)
+		http.Error(w, "failed to create policy", http.StatusInternalServerError)
+		return
+	}
 }
 
 func (s *System) UpdatePolicy(w http.ResponseWriter, r *http.Request) {
@@ -126,48 +121,44 @@ func (s *System) UpdatePolicy(w http.ResponseWriter, r *http.Request) {
 	policy.ID = policyId
 	policy.CreatedAt = time.Now()
 
-	p, err := kafka.NewProducer(&kafka.ConfigMap{
-		"bootstrap.servers": s.Config.ProjectProperties["kafka_host"],
-	})
-	if err != nil {
-		_ = logs.Errorf("failed to create producer: %v", err)
-		http.Error(w, "failed to create policy", http.StatusInternalServerError)
-	}
-	defer p.Close()
-	go func() {
-		for e := range p.Events() {
-			switch ev := e.(type) {
-			case *kafka.Message:
-				if ev.TopicPartition.Error != nil {
-					_ = logs.Errorf("Delivery failed: %v", ev.TopicPartition)
-				}
-			}
-		}
-	}()
-
-	data, err := json.Marshal(policy)
-	if err != nil {
-		_ = logs.Errorf("failed to create policy: %v", err)
-		http.Error(w, "failed to create policy", http.StatusInternalServerError)
+	kafkaHost, ok := s.Config.ProjectProperties["kafka_host"].(string)
+	if !ok {
+		_ = logs.Error("kafka_host config missing or invalid")
+		http.Error(w, "failed to update policy", http.StatusInternalServerError)
+		return
 	}
 
 	topic := fmt.Sprintf("policy-%s", policyId)
-	if err := p.Produce(&kafka.Message{
-		TopicPartition: kafka.TopicPartition{
-			Topic:     &topic,
-			Partition: 0,
-		},
+
+	writer := kafka.NewWriter(kafka.WriterConfig{
+		Brokers:  []string{kafkaHost},
+		Topic:    topic,
+		Balancer: &kafka.LeastBytes{},
+	})
+	defer writer.Close()
+
+	data, err := json.Marshal(policy)
+	if err != nil {
+		_ = logs.Errorf("failed to marshal policy: %v", err)
+		http.Error(w, "failed to update policy", http.StatusInternalServerError)
+		return
+	}
+
+	err = writer.WriteMessages(s.Context, kafka.Message{
+		Key:   []byte(policy.ID),
 		Value: data,
-	}, nil); err != nil {
-		_ = logs.Errorf("failed to create policy: %v", err)
-		http.Error(w, "failed to create policy", http.StatusInternalServerError)
+	})
+	if err != nil {
+		_ = logs.Errorf("failed to write message: %v", err)
+		http.Error(w, "failed to update policy", http.StatusInternalServerError)
+		return
 	}
 
 	if err := json.NewEncoder(w).Encode(&policy); err != nil {
-		_ = logs.Errorf("failed to create policy: %v", err)
-		http.Error(w, "failed to create policy", http.StatusInternalServerError)
+		_ = logs.Errorf("failed to encode response: %v", err)
+		http.Error(w, "failed to update policy", http.StatusInternalServerError)
+		return
 	}
-	p.Flush(15 * 1000)
 }
 
 func (s *System) DeletePolicy(w http.ResponseWriter, r *http.Request) {
@@ -207,112 +198,85 @@ func (s *System) GetPolicyVersions(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *System) GetPolicyFromStorage(policyId string) ([]interface{}, error) {
-	policy := fmt.Sprintf("policy-%s", policyId)
-
-	c, err := kafka.NewConsumer(&kafka.ConfigMap{
-		"bootstrap.servers":        s.Config.ProjectProperties["kafka_host"].(string),
-		"auto.offset.reset":        "earliest",
-		"group.id":                 policy,
-		"enable.partition.eof":     true,
-		"go.events.channel.enable": false,
-	})
-	if err != nil {
-		return nil, logs.Errorf("Failed to create consumer: %v", err)
+	kafkaHost, ok := s.Config.ProjectProperties["kafka_host"].(string)
+	if !ok {
+		return nil, fmt.Errorf("kafka_host config missing or invalid")
 	}
-	defer func() {
-		if err := c.Close(); err != nil {
-			_ = logs.Errorf("Failed to close consumer: %v", err)
-		}
-	}()
 
-	low, high, err := c.QueryWatermarkOffsets(policy, int32(0), 5*1000)
+	topic := fmt.Sprintf("policy-%s", policyId)
+	partition := 0
+
+	conn, err := kafka.DialLeader(s.Context, "tcp", kafkaHost, topic, partition)
 	if err != nil {
-		return nil, logs.Errorf("Failed to query watermark offsets: %v", err)
+		return nil, fmt.Errorf("failed to dial leader: %w", err)
 	}
+	defer conn.Close()
+
+	low, high, err := conn.ReadOffsets()
+	if err != nil {
+		return nil, fmt.Errorf("failed to read watermark offsets: %w", err)
+	}
+
 	messageCount := high - low
-	if high == low || messageCount == 0 {
-		return nil, logs.Error("no policy found")
-	}
-
-	if err := c.Assign([]kafka.TopicPartition{{
-		Topic:     &policy,
-		Partition: 0,
-		Offset:    kafka.Offset(low),
-	}}); err != nil {
-		return nil, logs.Errorf("Failed to assign partition: %v", err)
+	if messageCount <= 0 {
+		return nil, fmt.Errorf("no policy found")
 	}
 
 	var messages []interface{}
-	for i := int64(0); i < messageCount; i++ {
-		ev := c.Poll(100)
-		if ev == nil {
-			return nil, logs.Error("Failed to poll partition")
+
+	// Read messages from low offset up to high-1
+	for offset := low; offset < high; offset++ {
+		conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+		msg, err := conn.ReadMessage(1e6) // max 1MB
+		if err != nil {
+			_ = logs.Errorf("failed to read message at offset %d: %v", offset, err)
+			continue
 		}
 
-		switch e := ev.(type) {
-		case *kafka.Message:
-			var message interface{}
-			if err := json.Unmarshal(e.Value, &message); err != nil {
-				_ = logs.Errorf("Failed to unmarshal message: %v", err)
-				break
-			}
-			messages = append(messages, message)
-		case kafka.PartitionEOF:
-			i = messageCount
-		case kafka.Error:
-			return nil, logs.Errorf("Error from partition: %v", e)
+		var message interface{}
+		if err := json.Unmarshal(msg.Value, &message); err != nil {
+			_ = logs.Errorf("failed to unmarshal message at offset %d: %v", offset, err)
+			continue
 		}
+		messages = append(messages, message)
 	}
 
 	return messages, nil
 }
 
 func (s *System) GetLatestPolicyFromStorage(pid string) (interface{}, error) {
-	policy := fmt.Sprintf("policy-%s", pid)
+	kafkaHost, ok := s.Config.ProjectProperties["kafka_host"].(string)
+	if !ok {
+		return nil, fmt.Errorf("kafka_host config missing or invalid")
+	}
 
-	c, err := kafka.NewConsumer(&kafka.ConfigMap{
-		"bootstrap.servers": s.Config.ProjectProperties["kafka_host"].(string),
-		"auto.offset.reset": "latest",
-		"group.id":          policy,
-	})
+	topic := fmt.Sprintf("policy-%s", pid)
+	partition := 0
+
+	conn, err := kafka.DialLeader(s.Context, "tcp", kafkaHost, topic, partition)
 	if err != nil {
-		return nil, logs.Errorf("Failed to create consumer: %v", err)
+		return nil, fmt.Errorf("failed to dial leader: %w", err)
 	}
-	defer func() {
-		if err := c.Close(); err != nil {
-			_ = logs.Errorf("Failed to close consumer: %v", err)
-		}
-	}()
+	defer conn.Close()
 
-	low, high, err := c.QueryWatermarkOffsets(policy, int32(0), 5*1000)
+	lastOffset, err := conn.ReadLastOffset()
 	if err != nil {
-		return nil, logs.Errorf("Failed to query watermark offsets: %v", err)
+		return nil, fmt.Errorf("failed to read last offset: %w", err)
 	}
-	if high == low {
-		return nil, logs.Error("no policy found")
-	}
-
-	if err := c.Assign([]kafka.TopicPartition{{
-		Topic:     &policy,
-		Partition: 0,
-		Offset:    kafka.Offset(high - 1),
-	}}); err != nil {
-		return nil, logs.Errorf("Failed to assign partition: %v", err)
+	if lastOffset == 0 {
+		return nil, fmt.Errorf("no policy found")
 	}
 
-	ev := c.Poll(100)
-	if ev == nil {
-		return nil, logs.Error("Failed to poll partition")
+	// Seek to lastOffset - 1 (the last message)
+	if _, err := conn.Seek(lastOffset-1, io.SeekStart); err != nil {
+		return nil, fmt.Errorf("failed to seek to last offset: %w", err)
 	}
 
-	switch e := ev.(type) {
-	case *kafka.Message:
-		return e.Value, nil
-	case kafka.PartitionEOF:
-		return nil, logs.Error("Partition EOF")
-	case kafka.Error:
-		return nil, logs.Errorf("kafka Error %v", e)
-	default:
-		return nil, logs.Error("Unknown event")
+	conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	msg, err := conn.ReadMessage(1e6) // max 1MB
+	if err != nil {
+		return nil, fmt.Errorf("failed to read message: %w", err)
 	}
+
+	return msg.Value, nil
 }

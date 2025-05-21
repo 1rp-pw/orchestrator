@@ -7,7 +7,6 @@ toolchain go1.24.3
 require (
 	github.com/bugfixes/go-bugfixes v0.14.0
 	github.com/caarlos0/env/v8 v8.0.0
-	github.com/confluentinc/confluent-kafka-go/v2 v2.10.0
 	github.com/google/uuid v1.6.0
 	github.com/keloran/go-config v1.5.8
 )
@@ -40,8 +39,10 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/montanaflynn/stats v0.7.1 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
+	github.com/pierrec/lz4/v4 v4.1.15 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
+	github.com/segmentio/kafka-go v0.4.48 // indirect
 	github.com/segmentio/ksuid v1.0.4 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/scram v1.1.2 // indirect
