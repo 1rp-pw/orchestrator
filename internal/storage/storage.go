@@ -171,8 +171,9 @@ func (s *System) GetPolicy(w http.ResponseWriter, r *http.Request) {
 	policyId := r.PathValue("policyId")
 	p, err := s.GetLatestPolicyFromStorage(policyId)
 	if err != nil {
-		_ = logs.Errorf("Failed to get policy from storage: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		//_ = logs.Errorf("Failed to get policy from storage: %v", err)
+		w.WriteHeader(http.StatusNotFound)
+		return
 	}
 
 	if _, err := w.Write(p.([]byte)); err != nil {
@@ -186,8 +187,9 @@ func (s *System) GetPolicyVersions(w http.ResponseWriter, r *http.Request) {
 	policyId := r.PathValue("policyId")
 	p, err := s.GetPolicyFromStorage(policyId)
 	if err != nil {
-		_ = logs.Errorf("Failed to get policy from storage: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		//_ = logs.Errorf("Failed to get policy from storage: %v", err)
+		w.WriteHeader(http.StatusNotFound)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
