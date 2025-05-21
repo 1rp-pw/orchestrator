@@ -6,7 +6,7 @@ import (
 	"fmt"
 	policymodel "github.com/1rp-pw/orchestrator/internal/policy"
 	"github.com/bugfixes/go-bugfixes/logs"
-	kafka "github.com/confluentinc/confluent-kafka-go/v2/kafka"
+	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	"github.com/google/uuid"
 	ConfigBuilder "github.com/keloran/go-config"
 	"io"
