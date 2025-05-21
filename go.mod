@@ -7,7 +7,7 @@ toolchain go1.24.3
 require (
 	github.com/bugfixes/go-bugfixes v0.14.0
 	github.com/caarlos0/env/v8 v8.0.0
-	github.com/confluentinc/confluent-kafka-go v1.9.2
+	github.com/confluentinc/confluent-kafka-go/v2 v2.10.0
 	github.com/google/uuid v1.6.0
 	github.com/keloran/go-config v1.5.8
 )

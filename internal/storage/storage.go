@@ -6,11 +6,12 @@ import (
 	"fmt"
 	policymodel "github.com/1rp-pw/orchestrator/internal/policy"
 	"github.com/bugfixes/go-bugfixes/logs"
-	"github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	"github.com/google/uuid"
 	ConfigBuilder "github.com/keloran/go-config"
 	"io"
 	"net/http"
+	"time"
 )
 
 type System struct {
@@ -56,6 +57,7 @@ func (s *System) CreatePolicy(w http.ResponseWriter, r *http.Request) {
 	}
 	policy.Version = "draft"
 	policy.ID = uid.String()
+	policy.CreatedAt = time.Now()
 
 	p, err := kafka.NewProducer(&kafka.ConfigMap{
 		"bootstrap.servers": s.Config.ProjectProperties["kafka_host"],
@@ -122,6 +124,7 @@ func (s *System) UpdatePolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	policy.ID = policyId
+	policy.CreatedAt = time.Now()
 
 	p, err := kafka.NewProducer(&kafka.ConfigMap{
 		"bootstrap.servers": s.Config.ProjectProperties["kafka_host"],
