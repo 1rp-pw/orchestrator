@@ -5,16 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	policymodel "github.com/1rp-pw/orchestrator/internal/policy"
 	"github.com/bugfixes/go-bugfixes/logs"
 	ConfigBuilder "github.com/keloran/go-config"
 	"io"
 	"net/http"
 )
-
-type Policy struct {
-	Rule string      `json:"rule"`
-	Data interface{} `json:"data"`
-}
 
 type System struct {
 	Config  *ConfigBuilder.Config
@@ -48,7 +44,7 @@ func (s *System) Run(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	// Optionally, you can validate the JSON here if needed
-	var policy Policy
+	var policy policymodel.Policy
 	if err := json.Unmarshal(bodyBytes, &policy); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
