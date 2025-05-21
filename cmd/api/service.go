@@ -23,10 +23,15 @@ func (pc ProjectConfig) Build(cfg *ConfigBuilder.Config) error {
 	}
 
 	type PC struct {
-		RailwayPort   string `env:"PORT" envDefault:"3000"`
-		OnRailway     bool   `env:"ON_RAILWAY" envDefault:"false"`
+		Flags FlagsService
+
+		// Railway
+		RailwayPort string `env:"PORT" envDefault:"3000"`
+		OnRailway   bool   `env:"ON_RAILWAY" envDefault:"false"`
+
+		// Policy
 		EngineAddress string `env:"ENGINE_ADDRESS" envDefault:"localhost:9009"`
-		Flags         FlagsService
+		KafkaHost     string `env:"KAFKA_HOST" envDefault:"kafka"`
 	}
 	p := PC{}
 
@@ -38,11 +43,13 @@ func (pc ProjectConfig) Build(cfg *ConfigBuilder.Config) error {
 	}
 	cfg.ProjectProperties["railway_port"] = p.RailwayPort
 	cfg.ProjectProperties["on_railway"] = p.OnRailway
-	cfg.ProjectProperties["engine_address"] = p.EngineAddress
 
 	cfg.ProjectProperties["flags_agent"] = p.Flags.AgentID
 	cfg.ProjectProperties["flags_environment"] = p.Flags.EnvironmentID
 	cfg.ProjectProperties["flags_project"] = p.Flags.ProjectID
+
+	cfg.ProjectProperties["engine_address"] = p.EngineAddress
+	cfg.ProjectProperties["kafka_host"] = p.KafkaHost
 
 	return nil
 }
