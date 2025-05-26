@@ -43,6 +43,7 @@ func (s *Service) startHTTP(errChan chan error) {
 	mux.HandleFunc("DELETE /policy/{policyId}", storage.NewSystem(s.Config).DeletePolicy)
 	mux.HandleFunc("GET /policy/{policyId}", storage.NewSystem(s.Config).GetPolicy)
 	mux.HandleFunc("GET /policy/{policyId}/versions", storage.NewSystem(s.Config).GetPolicyVersions)
+	mux.HandleFunc("GET /policies", storage.NewSystem(s.Config).GetAllPolicies)
 
 	// flow system
 	mux.HandleFunc("POST /flow", func(w http.ResponseWriter, r *http.Request) {

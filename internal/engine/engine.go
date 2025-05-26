@@ -6,12 +6,17 @@ import (
 	"encoding/json"
 	"fmt"
 	policymodel "github.com/1rp-pw/orchestrator/internal/policy"
-	"github.com/1rp-pw/orchestrator/internal/storage"
 	"github.com/bugfixes/go-bugfixes/logs"
 	ConfigBuilder "github.com/keloran/go-config"
-	"io"
 	"net/http"
 )
+
+type engineResponse struct {
+	Result bool        `json:"result"`
+	Trace  interface{} `json:"trace"`
+	Text   []string    `json:"text"`
+	Data   interface{} `json:"data"`
+}
 
 type System struct {
 	Config  *ConfigBuilder.Config
@@ -30,94 +35,7 @@ func (s *System) SetContext(ctx context.Context) *System {
 	return s
 }
 
-func (s *System) Run(w http.ResponseWriter, r *http.Request) {
-	s.Context = r.Context()
-
-	bodyBytes, err := io.ReadAll(r.Body)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	defer func() {
-		if err := r.Body.Close(); err != nil {
-			_ = logs.Errorf("error closing body: %v", err)
-		}
-	}()
-
-	var policy policymodel.Policy
-	if err := json.Unmarshal(bodyBytes, &policy); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	policyResult, err := s.RunPolicyInEngine(policy)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	if policyResult == nil {
-		_ = logs.Error("response is nil")
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	if _, err := w.Write(policyResult); err != nil {
-		_ = logs.Errorf("failed to write response: %v", err)
-	}
-}
-
-func (s *System) RunPolicy(w http.ResponseWriter, r *http.Request) {
-	s.Context = r.Context()
-	policyId := r.PathValue("policyId")
-
-	// get the policy from storage
-	st := storage.NewSystem(s.Config).SetContext(s.Context)
-	p, err := st.GetLatestPolicyFromStorage(policyId)
-	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	storedPolicy := policymodel.Policy{}
-	if err := json.Unmarshal(p.([]byte), &storedPolicy); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	bodyBytes, err := io.ReadAll(r.Body)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	var policyData policymodel.Policy
-	if err := json.Unmarshal(bodyBytes, &policyData); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	storedPolicy.Data = policyData.Data
-
-	policyResult, err := s.RunPolicyInEngine(storedPolicy)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	if policyResult == nil {
-		_ = logs.Error("response is nil")
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	if _, err := w.Write(policyResult); err != nil {
-		_ = logs.Errorf("failed to write response: %v", err)
-	}
-}
-
-func (s *System) RunPolicyInEngine(policy policymodel.Policy) ([]byte, error) {
+func (s *System) runPolicy(policy policymodel.Policy) (*engineResponse, error) {
 	data, err := json.Marshal(policy)
 	if err != nil {
 		return nil, err
@@ -148,11 +66,11 @@ func (s *System) RunPolicyInEngine(policy policymodel.Policy) ([]byte, error) {
 		}
 	}()
 
-	data, err = io.ReadAll(resp.Body)
-	if err != nil {
-		_ = logs.Errorf("Error reading response body: %s", err)
-		return nil, nil
+	er := engineResponse{}
+	//var er interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&er); err != nil {
+		_ = logs.Errorf("error decoding response: %v", err)
 	}
 
-	return data, nil
+	return &er, nil
 }
