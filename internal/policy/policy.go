@@ -9,4 +9,6 @@ type Policy struct {
 	Tests     interface{} `json:"tests"`
 	Version   string      `json:"version"`
 	CreatedAt time.Time   `json:"created_at"`
+	DataModel interface{} `json:"data_model"`
+	Name      string      `json:"name"`
 }
