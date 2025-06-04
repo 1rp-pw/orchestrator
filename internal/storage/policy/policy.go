@@ -47,6 +47,37 @@ func (s *System) StoreInitialPolicy(p *policy.Policy) (*policy.Policy, error) {
 	return p, nil
 }
 
-func (s *System) LoadPolicy(policyId string) (interface{}, error) {
-	return nil, nil
+func (s *System) UpdateDraft(p policy.Policy) error {
+	client, err := s.Config.Database.GetPGXPoolClient(s.Context)
+	if err != nil {
+		return logs.Errorf("failed to connect to database: %v", err)
+	}
+	defer client.Close()
+	if _, err := client.Exec(s.Context, `
+		UPDATE public.policy_versions SET 
+			data_model = $1, 
+			tests = $2, 
+			policy_text = $3, 
+			updated_at = now()
+		WHERE id = $4`, p.DataModel, p.Tests, p.Rule, p.ID); err != nil {
+		return logs.Errorf("failed to update draft: %v", err)
+	}
+
+	return nil
+}
+
+func (s *System) LoadPolicy(policyId string) (policy.Policy, error) {
+	p := policy.Policy{}
+
+	client, err := s.Config.Database.GetPGXPoolClient(s.Context)
+	if err != nil {
+		return p, logs.Errorf("failed to connect to database: %v", err)
+	}
+	defer client.Close()
+	if err := client.QueryRow(s.Context, "SELECT policy_name, version, data_model, tests, policy_text FROM public.policy_versions WHERE id = $1", policyId).Scan(&p.Name, &p.Version, &p.DataModel, &p.Tests, &p.Rule); err != nil {
+		return p, logs.Errorf("failed to load policy: %v", err)
+	}
+	p.ID = policyId
+
+	return p, nil
 }

@@ -41,11 +41,31 @@ func (s *System) DeletePolicy(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *System) UpdatePolicy(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
+	var i policy.Policy
+	if err := json.NewDecoder(r.Body).Decode(&i); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if err := s.UpdateDraft(i); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 func (s *System) GetPolicy(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
+	policyId := r.PathValue("policyId")
+	p, err := s.LoadPolicy(policyId)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	if err := json.NewEncoder(w).Encode(p); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+	}
 }
 
 func (s *System) GetPolicyVersion(w http.ResponseWriter, r *http.Request) {
