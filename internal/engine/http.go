@@ -23,13 +23,13 @@ func (s *System) Run(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	var policy policymodel.Policy
-	if err := json.Unmarshal(bodyBytes, &policy); err != nil {
+	var p policymodel.Policy
+	if err := json.Unmarshal(bodyBytes, &p); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	pr, err := s.runPolicy(policy)
+	pr, err := s.runPolicy(p)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
