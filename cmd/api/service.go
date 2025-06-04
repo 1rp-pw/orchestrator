@@ -31,7 +31,6 @@ func (pc ProjectConfig) Build(cfg *ConfigBuilder.Config) error {
 
 		// Policy
 		EngineAddress string `env:"ENGINE_ADDRESS" envDefault:"localhost:9009"`
-		KafkaHost     string `env:"KAFKA_HOST" envDefault:"kafka"`
 	}
 	p := PC{}
 
@@ -49,7 +48,6 @@ func (pc ProjectConfig) Build(cfg *ConfigBuilder.Config) error {
 	cfg.ProjectProperties["flags_project"] = p.Flags.ProjectID
 
 	cfg.ProjectProperties["engine_address"] = p.EngineAddress
-	cfg.ProjectProperties["kafka_host"] = p.KafkaHost
 
 	return nil
 }
@@ -61,6 +59,7 @@ func main() {
 	err := c.Build(
 		ConfigBuilder.Local,
 		ConfigBuilder.Bugfixes,
+		ConfigBuilder.Postgres,
 		ConfigBuilder.WithProjectConfigurator(ProjectConfig{}))
 	if err != nil {
 		logs.Fatalf("Failed to build config: %v", err)

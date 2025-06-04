@@ -4,7 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"github.com/1rp-pw/orchestrator/internal/engine"
-	"github.com/1rp-pw/orchestrator/internal/storage"
+	"github.com/1rp-pw/orchestrator/internal/storage/policy"
 	"github.com/bugfixes/go-bugfixes/logs"
 	"github.com/bugfixes/go-bugfixes/middleware"
 	ConfigBuilder "github.com/keloran/go-config"
@@ -38,12 +38,13 @@ func (s *Service) startHTTP(errChan chan error) {
 	mux.HandleFunc("POST /run/{policyId}", engine.NewSystem(s.Config).RunPolicy)
 
 	// policy storage
-	mux.HandleFunc("POST /policy", storage.NewSystem(s.Config).CreatePolicy)
-	mux.HandleFunc("PUT /policy/{policyId}", storage.NewSystem(s.Config).UpdatePolicy)
-	mux.HandleFunc("DELETE /policy/{policyId}", storage.NewSystem(s.Config).DeletePolicy)
-	mux.HandleFunc("GET /policy/{policyId}", storage.NewSystem(s.Config).GetPolicy)
-	mux.HandleFunc("GET /policy/{policyId}/versions", storage.NewSystem(s.Config).GetPolicyVersions)
-	mux.HandleFunc("GET /policies", storage.NewSystem(s.Config).GetAllPolicies)
+	mux.HandleFunc("POST /policy", policy.NewSystem(s.Config).CreatePolicy)
+	mux.HandleFunc("PUT /policy/{policyId}", policy.NewSystem(s.Config).UpdatePolicy)
+	mux.HandleFunc("DELETE /policy/{policyId}", policy.NewSystem(s.Config).DeletePolicy)
+	mux.HandleFunc("GET /policy/{policyId}", policy.NewSystem(s.Config).GetPolicy)
+	mux.HandleFunc("GET /policy/{policyId}/versions", policy.NewSystem(s.Config).ListPolicyVersions)
+	mux.HandleFunc("GET /policy/{policyId}/{versionId}", policy.NewSystem(s.Config).GetPolicyVersion)
+	mux.HandleFunc("GET /policies", policy.NewSystem(s.Config).GetAllPolicies)
 
 	// flow system
 	mux.HandleFunc("POST /flow", func(w http.ResponseWriter, r *http.Request) {
