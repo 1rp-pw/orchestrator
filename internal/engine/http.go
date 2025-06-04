@@ -53,12 +53,6 @@ func (s *System) RunPolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	storedPolicy := policymodel.Policy{}
-	if err := json.Unmarshal(p.([]byte), &storedPolicy); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
 	bodyBytes, err := io.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -70,9 +64,9 @@ func (s *System) RunPolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	storedPolicy.Data = policyData.Data
+	p.Data = policyData.Data
 
-	pr, err := s.runPolicy(storedPolicy)
+	pr, err := s.runPolicy(p)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
