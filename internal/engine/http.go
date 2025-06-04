@@ -3,7 +3,7 @@ package engine
 import (
 	"encoding/json"
 	policymodel "github.com/1rp-pw/orchestrator/internal/policy"
-	"github.com/1rp-pw/orchestrator/internal/storage"
+	"github.com/1rp-pw/orchestrator/internal/storage/policy"
 	"github.com/bugfixes/go-bugfixes/logs"
 	"io"
 	"net/http"
@@ -23,13 +23,13 @@ func (s *System) Run(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	var policy policymodel.Policy
-	if err := json.Unmarshal(bodyBytes, &policy); err != nil {
+	var p policymodel.Policy
+	if err := json.Unmarshal(bodyBytes, &p); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	pr, err := s.runPolicy(policy)
+	pr, err := s.runPolicy(p)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -46,8 +46,8 @@ func (s *System) RunPolicy(w http.ResponseWriter, r *http.Request) {
 	policyId := r.PathValue("policyId")
 
 	// get the policy from storage
-	st := storage.NewSystem(s.Config).SetContext(s.Context)
-	p, err := st.GetLatestPolicyFromStorage(policyId)
+	st := policy.NewSystem(s.Config).SetContext(s.Context)
+	p, err := st.LoadPolicy(policyId)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return

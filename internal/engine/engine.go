@@ -16,6 +16,7 @@ type engineResponse struct {
 	Trace  interface{} `json:"trace"`
 	Text   []string    `json:"text"`
 	Data   interface{} `json:"data"`
+	Errors interface{} `json:"errors"`
 }
 
 type System struct {
@@ -66,11 +67,13 @@ func (s *System) runPolicy(policy policymodel.Policy) (*engineResponse, error) {
 		}
 	}()
 
-	er := engineResponse{}
 	//var er interface{}
+	er := engineResponse{}
+
 	if err := json.NewDecoder(resp.Body).Decode(&er); err != nil {
 		_ = logs.Errorf("error decoding response: %v", err)
 	}
 
+	//return nil, nil
 	return &er, nil
 }
