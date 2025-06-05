@@ -14,7 +14,7 @@ import (
 type engineResponse struct {
 	Result bool        `json:"result"`
 	Trace  interface{} `json:"trace"`
-	Text   []string    `json:"text"`
+	Rule   []string    `json:"rule"`
 	Data   interface{} `json:"data"`
 	Errors interface{} `json:"errors"`
 }
