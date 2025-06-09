@@ -16,7 +16,7 @@ type engineResponse struct {
 	Trace  interface{} `json:"trace"`
 	Rule   []string    `json:"rule"`
 	Data   interface{} `json:"data"`
-	Errors interface{} `json:"errors"`
+	Error  interface{} `json:"error"`
 }
 
 type System struct {
