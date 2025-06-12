@@ -12,4 +12,5 @@ type Policy struct {
 	UpdatedAt time.Time   `json:"updatedAt"`
 	DataModel interface{} `json:"schema"`
 	Name      string      `json:"name"`
+	IsDraft   bool        `json:"draft"`
 }

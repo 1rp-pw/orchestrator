@@ -47,12 +47,20 @@ func (s *System) UpdatePolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.UpdateDraft(i); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+	if i.Version == "draft" || i.Version == "" {
+		if err := s.UpdateDraft(i); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	if err := s.CreateVersion(i); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+	w.WriteHeader(http.StatusCreated)
 }
 
 func (s *System) GetPolicy(w http.ResponseWriter, r *http.Request) {

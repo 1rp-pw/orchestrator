@@ -2,6 +2,7 @@ package policy
 
 import (
 	"context"
+	"fmt"
 	"github.com/1rp-pw/orchestrator/internal/policy"
 	"github.com/bugfixes/go-bugfixes/logs"
 	ConfigBuilder "github.com/keloran/go-config"
@@ -66,6 +67,20 @@ func (s *System) UpdateDraft(p policy.Policy) error {
 	return nil
 }
 
+func (s *System) CreateVersion(p policy.Policy) error {
+	client, err := s.Config.Database.GetPGXPoolClient(s.Context)
+	if err != nil {
+		return logs.Errorf("failed to connect to database: %v", err)
+	}
+	defer client.Close()
+
+	if _, err := client.Exec(s.Context, `SELECT publish_draft($1, $2)`, p.ID, fmt.Sprintf("v%s", p.Version)); err != nil {
+		return logs.Errorf("failed to create version: %v", err)
+	}
+
+	return nil
+}
+
 func (s *System) LoadPolicy(policyId string) (policy.Policy, error) {
 	p := policy.Policy{}
 
@@ -121,13 +136,15 @@ func (s *System) GetPolicyVersions(policyId string) ([]policy.Policy, error) {
 		return pp, logs.Errorf("failed to connect to database: %v", err)
 	}
 	defer client.Close()
-	rows, err := client.Query(s.Context, "SELECT id, policy_name, data_model, tests, policy_text, version, created_at, updated_at FROM public.policy_versions WHERE id = $1", policyId)
+	rows, err := client.Query(s.Context, "SELECT id, policy_name, data_model, tests, policy_text, version, created_at, updated_at, is_immutable FROM public.policy_versions WHERE id = $1", policyId)
 	if err != nil {
 		return pp, logs.Errorf("failed to load policies: %v", err)
 	}
 	defer rows.Close()
 
 	for rows.Next() {
+		draft := false
+
 		p := policy.Policy{}
 		if err := rows.Scan(
 			&p.ID,
@@ -138,9 +155,11 @@ func (s *System) GetPolicyVersions(policyId string) ([]policy.Policy, error) {
 			&p.Version,
 			&p.CreatedAt,
 			&p.UpdatedAt,
+			&draft,
 		); err != nil {
 			return pp, logs.Errorf("failed to load policies: %v", err)
 		}
+		p.IsDraft = !draft
 
 		pp = append(pp, p)
 	}
