@@ -159,7 +159,7 @@ func (s *System) GetPolicyVersions(policyId string) ([]policy.Policy, error) {
 		); err != nil {
 			return pp, logs.Errorf("failed to load policies: %v", err)
 		}
-		p.IsDraft = draft
+		p.IsDraft = !draft
 
 		pp = append(pp, p)
 	}
