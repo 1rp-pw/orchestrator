@@ -60,6 +60,7 @@ func (s *System) UpdatePolicy(w http.ResponseWriter, r *http.Request) {
 	if err := s.CreateVersion(i); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 	}
+	w.WriteHeader(http.StatusCreated)
 }
 
 func (s *System) GetPolicy(w http.ResponseWriter, r *http.Request) {
