@@ -7,7 +7,6 @@ import (
 	"github.com/1rp-pw/orchestrator/internal/policy"
 	"github.com/bugfixes/go-bugfixes/logs"
 	ConfigBuilder "github.com/keloran/go-config"
-	"time"
 )
 
 type System struct {
@@ -130,19 +129,21 @@ func (s *System) AllPolicies() ([]policy.Policy, error) {
 		return pp, logs.Errorf("failed to connect to database: %v", err)
 	}
 	defer client.Close()
-	rows, err := client.Query(s.Context, "SELECT base_policy_id, current_name, version_count, draft_id, latest_version_date, has_draft FROM public.policy_summary")
+	rows, err := client.Query(s.Context, "SELECT base_policy_id, current_name, version_count, draft_id, first_created_date, latest_activity_date, latest_version_date, has_draft FROM public.policy_summary")
 	if err != nil {
 		return pp, logs.Errorf("failed to load policies: %v", err)
 	}
 	defer rows.Close()
 
 	type dataStruct struct {
-		ID        sql.NullString
-		Name      sql.NullString
-		Versions  sql.NullInt32
-		DraftID   sql.NullString
-		UpdatedAt sql.NullTime
-		IsDraft   bool
+		ID              sql.NullString
+		Name            sql.NullString
+		Versions        sql.NullInt32
+		DraftID         sql.NullString
+		CreatedAt       sql.NullTime
+		UpdatedAt       sql.NullTime
+		LastPublishedAt sql.NullTime
+		IsDraft         bool
 	}
 
 	for rows.Next() {
@@ -152,7 +153,9 @@ func (s *System) AllPolicies() ([]policy.Policy, error) {
 			&d.Name,
 			&d.Versions,
 			&d.DraftID,
+			&d.CreatedAt,
 			&d.UpdatedAt,
+			&d.LastPublishedAt,
 			&d.IsDraft,
 		); err != nil {
 			return pp, logs.Errorf("failed to load policies: %v", err)
@@ -163,7 +166,11 @@ func (s *System) AllPolicies() ([]policy.Policy, error) {
 			Name:      d.Name.String,
 			Version:   "draft",
 			IsDraft:   d.IsDraft,
-			UpdatedAt: time.Now(),
+			UpdatedAt: d.UpdatedAt.Time,
+			CreatedAt: d.CreatedAt.Time,
+		}
+		if d.LastPublishedAt.Valid {
+			p.LastPublishedAt = d.LastPublishedAt.Time
 		}
 		pp = append(pp, p)
 	}
