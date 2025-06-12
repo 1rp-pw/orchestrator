@@ -73,9 +73,27 @@ func (s *System) GetPolicyVersion(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *System) ListPolicyVersions(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
+	policyId := r.PathValue("policyId")
+
+	p, err := s.GetPolicyVersions(policyId)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	if err := json.NewEncoder(w).Encode(p); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+	}
 }
 
 func (s *System) GetAllPolicies(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
+	p, err := s.AllPolicies()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if err := json.NewEncoder(w).Encode(p); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+	}
 }

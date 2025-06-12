@@ -8,7 +8,8 @@ type Policy struct {
 	Data      interface{} `json:"data"`
 	Tests     interface{} `json:"tests"`
 	Version   string      `json:"version"`
-	CreatedAt time.Time   `json:"created_at"`
-	DataModel interface{} `json:"data_model"`
+	CreatedAt time.Time   `json:"createdAt"`
+	UpdatedAt time.Time   `json:"updatedAt"`
+	DataModel interface{} `json:"schema"`
 	Name      string      `json:"name"`
 }

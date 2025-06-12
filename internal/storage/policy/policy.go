@@ -81,3 +81,69 @@ func (s *System) LoadPolicy(policyId string) (policy.Policy, error) {
 
 	return p, nil
 }
+
+func (s *System) AllPolicies() ([]policy.Policy, error) {
+	var pp []policy.Policy
+
+	client, err := s.Config.Database.GetPGXPoolClient(s.Context)
+	if err != nil {
+		return pp, logs.Errorf("failed to connect to database: %v", err)
+	}
+	defer client.Close()
+	rows, err := client.Query(s.Context, "SELECT id, policy_name, version, created_at, updated_at FROM public.policy_versions GROUP BY id")
+	if err != nil {
+		return pp, logs.Errorf("failed to load policies: %v", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		p := policy.Policy{}
+		if err := rows.Scan(
+			&p.ID,
+			&p.Name,
+			&p.Version,
+			&p.CreatedAt,
+			&p.UpdatedAt,
+		); err != nil {
+			return pp, logs.Errorf("failed to load policies: %v", err)
+		}
+		pp = append(pp, p)
+	}
+
+	return pp, nil
+}
+
+func (s *System) GetPolicyVersions(policyId string) ([]policy.Policy, error) {
+	var pp []policy.Policy
+
+	client, err := s.Config.Database.GetPGXPoolClient(s.Context)
+	if err != nil {
+		return pp, logs.Errorf("failed to connect to database: %v", err)
+	}
+	defer client.Close()
+	rows, err := client.Query(s.Context, "SELECT id, policy_name, data_model, tests, policy_text, version, created_at, updated_at FROM public.policy_versions WHERE id = $1", policyId)
+	if err != nil {
+		return pp, logs.Errorf("failed to load policies: %v", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		p := policy.Policy{}
+		if err := rows.Scan(
+			&p.ID,
+			&p.Name,
+			&p.DataModel,
+			&p.Tests,
+			&p.Rule,
+			&p.Version,
+			&p.CreatedAt,
+			&p.UpdatedAt,
+		); err != nil {
+			return pp, logs.Errorf("failed to load policies: %v", err)
+		}
+
+		pp = append(pp, p)
+	}
+
+	return pp, nil
+}
