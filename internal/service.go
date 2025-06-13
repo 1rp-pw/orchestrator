@@ -39,6 +39,7 @@ func (s *Service) startHTTP(errChan chan error) {
 
 	// policy storage
 	mux.HandleFunc("POST /policy", policy.NewSystem(s.Config).CreatePolicy)
+	mux.HandleFunc("GET /policy/{policyId}/draft", policy.NewSystem(s.Config).CreateDraftFromVersion)
 	mux.HandleFunc("PUT /policy/{policyId}", policy.NewSystem(s.Config).UpdatePolicy)
 	mux.HandleFunc("DELETE /policy/{policyId}", policy.NewSystem(s.Config).DeletePolicy)
 	mux.HandleFunc("GET /policy/{policyId}", policy.NewSystem(s.Config).GetPolicy)
