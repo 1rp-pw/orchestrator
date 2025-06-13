@@ -2,6 +2,7 @@ package policy
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"github.com/1rp-pw/orchestrator/internal/policy"
 	"github.com/bugfixes/go-bugfixes/logs"
@@ -32,18 +33,10 @@ func (s *System) StoreInitialPolicy(p *policy.Policy) (*policy.Policy, error) {
 	}
 	defer client.Close()
 
-	if err := client.QueryRow(s.Context, `
-		INSERT INTO 
-		    public.policy_versions (
-				policy_name, 
-				version, 
-				data_model, 
-				tests, 
-				policy_text,
-		        user_id
-		    ) VALUES ($1, $2, $3, $4, $5, 'f08c6d21-f0d2-42fa-ad4d-f3b45dc81998') RETURNING id`, p.Name, p.Version, p.DataModel, p.Tests, p.Rule).Scan(&p.ID); err != nil {
+	if err := client.QueryRow(s.Context, `SELECT create_policy ($1, $2, $3, $4)`, p.Name, p.DataModel, p.Tests, p.Rule).Scan(&p.BaseID); err != nil {
 		return nil, logs.Errorf("failed to store initial policy: %v", err)
 	}
+	p.Version = "draft"
 
 	return p, nil
 }
@@ -54,13 +47,7 @@ func (s *System) UpdateDraft(p policy.Policy) error {
 		return logs.Errorf("failed to connect to database: %v", err)
 	}
 	defer client.Close()
-	if _, err := client.Exec(s.Context, `
-		UPDATE public.policy_versions SET 
-			data_model = $1, 
-			tests = $2, 
-			policy_text = $3, 
-			updated_at = now()
-		WHERE id = $4`, p.DataModel, p.Tests, p.Rule, p.ID); err != nil {
+	if _, err := client.Exec(s.Context, `SELECT update_draft($1, $2, $3, $4, $5)`, p.BaseID, p.DataModel, p.Tests, p.Rule, p.Description); err != nil {
 		return logs.Errorf("failed to update draft: %v", err)
 	}
 
@@ -74,7 +61,7 @@ func (s *System) CreateVersion(p policy.Policy) error {
 	}
 	defer client.Close()
 
-	if _, err := client.Exec(s.Context, `SELECT publish_draft($1, $2)`, p.ID, fmt.Sprintf("v%s", p.Version)); err != nil {
+	if _, err := client.Exec(s.Context, `SELECT publish_draft_as_version($1, $2, $3)`, p.BaseID, fmt.Sprintf("v%s", p.Version), p.Description); err != nil {
 		return logs.Errorf("failed to create version: %v", err)
 	}
 
@@ -82,17 +69,54 @@ func (s *System) CreateVersion(p policy.Policy) error {
 }
 
 func (s *System) LoadPolicy(policyId string) (policy.Policy, error) {
-	p := policy.Policy{}
+	type dataStruct struct {
+		Name      sql.NullString
+		BaseID    sql.NullString
+		Version   sql.NullString
+		DataModel sql.NullString
+		Tests     sql.NullString
+		Rule      sql.NullString
+		Status    sql.NullString
+	}
+	d := dataStruct{}
 
 	client, err := s.Config.Database.GetPGXPoolClient(s.Context)
 	if err != nil {
-		return p, logs.Errorf("failed to connect to database: %v", err)
+		return policy.Policy{}, logs.Errorf("failed to connect to database: %v", err)
 	}
 	defer client.Close()
-	if err := client.QueryRow(s.Context, "SELECT policy_name, version, data_model, tests, policy_text FROM public.policy_versions WHERE id = $1", policyId).Scan(&p.Name, &p.Version, &p.DataModel, &p.Tests, &p.Rule); err != nil {
-		return p, logs.Errorf("failed to load policy: %v", err)
+	if err := client.QueryRow(s.Context, `
+		SELECT 
+		    name, 
+		    base_policy_id, 
+		    version, 
+		    data_model, 
+		    tests, 
+		    rule, 
+		    status 
+		FROM public.policies 
+		WHERE policy_id = $1`, policyId,
+	).Scan(
+		&d.Name,
+		&d.BaseID,
+		&d.Version,
+		&d.DataModel,
+		&d.Tests,
+		&d.Rule,
+		&d.Status,
+	); err != nil {
+		return policy.Policy{}, logs.Errorf("failed to load policy: %v", err)
 	}
-	p.ID = policyId
+	p := policy.Policy{
+		PolicyID:  policyId,
+		BaseID:    d.BaseID.String,
+		Name:      d.Name.String,
+		Version:   d.Version.String,
+		DataModel: d.DataModel.String,
+		Tests:     d.Tests.String,
+		Rule:      d.Rule.String,
+		Status:    d.Status.String,
+	}
 
 	return p, nil
 }
@@ -105,22 +129,48 @@ func (s *System) AllPolicies() ([]policy.Policy, error) {
 		return pp, logs.Errorf("failed to connect to database: %v", err)
 	}
 	defer client.Close()
-	rows, err := client.Query(s.Context, "SELECT id, policy_name, version, created_at, updated_at FROM public.policy_versions GROUP BY id")
+	rows, err := client.Query(s.Context, "SELECT base_policy_id, current_name, version_count, draft_id, first_created_date, latest_activity_date, latest_version_date, has_draft FROM public.policy_summary")
 	if err != nil {
 		return pp, logs.Errorf("failed to load policies: %v", err)
 	}
 	defer rows.Close()
 
+	type dataStruct struct {
+		ID              sql.NullString
+		Name            sql.NullString
+		Versions        sql.NullInt32
+		DraftID         sql.NullString
+		CreatedAt       sql.NullTime
+		UpdatedAt       sql.NullTime
+		LastPublishedAt sql.NullTime
+		IsDraft         bool
+	}
+
 	for rows.Next() {
-		p := policy.Policy{}
+		d := dataStruct{}
 		if err := rows.Scan(
-			&p.ID,
-			&p.Name,
-			&p.Version,
-			&p.CreatedAt,
-			&p.UpdatedAt,
+			&d.ID,
+			&d.Name,
+			&d.Versions,
+			&d.DraftID,
+			&d.CreatedAt,
+			&d.UpdatedAt,
+			&d.LastPublishedAt,
+			&d.IsDraft,
 		); err != nil {
 			return pp, logs.Errorf("failed to load policies: %v", err)
+		}
+
+		p := policy.Policy{
+			BaseID:    d.ID.String,
+			Name:      d.Name.String,
+			Version:   "draft",
+			IsDraft:   d.IsDraft,
+			UpdatedAt: d.UpdatedAt.Time,
+			CreatedAt: d.CreatedAt.Time,
+		}
+		if d.LastPublishedAt.Valid {
+			p.LastPublishedAt = d.LastPublishedAt.Time
 		}
 		pp = append(pp, p)
 	}
@@ -128,7 +178,7 @@ func (s *System) AllPolicies() ([]policy.Policy, error) {
 	return pp, nil
 }
 
-func (s *System) GetPolicyVersions(policyId string) ([]policy.Policy, error) {
+func (s *System) GetPolicyVersions(basePolicyId string) ([]policy.Policy, error) {
 	var pp []policy.Policy
 
 	client, err := s.Config.Database.GetPGXPoolClient(s.Context)
@@ -136,30 +186,74 @@ func (s *System) GetPolicyVersions(policyId string) ([]policy.Policy, error) {
 		return pp, logs.Errorf("failed to connect to database: %v", err)
 	}
 	defer client.Close()
-	rows, err := client.Query(s.Context, "SELECT id, policy_name, data_model, tests, policy_text, version, created_at, updated_at, is_immutable FROM public.policy_versions WHERE id = $1", policyId)
+	rows, err := client.Query(s.Context, `
+		SELECT 
+		    policy_id, 
+		    name, 
+		    version, 
+		    rule, 
+		    data_model, 
+		    description, 
+		    status, 
+		    created_at, 
+		    updated_at 
+		FROM policies 
+		WHERE base_policy_id = $1
+		ORDER BY 
+		    CASE WHEN status = 'draft' THEN 0 ELSE 1 END,
+		    CASE WHEN version IS NULL THEN '' ELSE version END`, basePolicyId)
 	if err != nil {
 		return pp, logs.Errorf("failed to load policies: %v", err)
 	}
 	defer rows.Close()
 
-	for rows.Next() {
-		draft := false
+	type dataStruct struct {
+		ID          sql.NullString
+		Name        sql.NullString
+		Version     sql.NullString
+		Rule        sql.NullString
+		DataModel   sql.NullString
+		Description sql.NullString
+		Status      sql.NullString
+		CreatedAt   sql.NullTime
+		UpdatedAt   sql.NullTime
+	}
 
-		p := policy.Policy{}
+	for rows.Next() {
+		d := dataStruct{}
 		if err := rows.Scan(
-			&p.ID,
-			&p.Name,
-			&p.DataModel,
-			&p.Tests,
-			&p.Rule,
-			&p.Version,
-			&p.CreatedAt,
-			&p.UpdatedAt,
-			&draft,
+			&d.ID,
+			&d.Name,
+			&d.Version,
+			&d.Rule,
+			&d.DataModel,
+			&d.Description,
+			&d.Status,
+			&d.CreatedAt,
+			&d.UpdatedAt,
 		); err != nil {
 			return pp, logs.Errorf("failed to load policies: %v", err)
 		}
-		p.IsDraft = !draft
+
+		p := policy.Policy{
+			BaseID:      basePolicyId,
+			PolicyID:    d.ID.String,
+			Name:        d.Name.String,
+			Description: d.Description.String,
+			DataModel:   d.DataModel.String,
+			CreatedAt:   d.CreatedAt.Time,
+			UpdatedAt:   d.UpdatedAt.Time,
+			Status:      d.Status.String,
+			Rule:        d.Rule.String,
+		}
+
+		if d.Status.String == "draft" {
+			p.IsDraft = true
+		}
+
+		if d.Version.String != "" {
+			p.Version = d.Version.String
+		}
 
 		pp = append(pp, p)
 	}

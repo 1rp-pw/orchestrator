@@ -47,7 +47,7 @@ func (s *System) UpdatePolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if i.Version == "draft" || i.Version == "" {
+	if i.Status == "draft" {
 		if err := s.UpdateDraft(i); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
