@@ -18,4 +18,5 @@ type Policy struct {
 	Description     string      `json:"description"`
 	DraftID         string      `json:"draftId"`
 	Status          string      `json:"status"`
+	HasDraft        bool        `json:"hasDraft"`
 }

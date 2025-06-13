@@ -121,6 +121,33 @@ func (s *System) LoadPolicy(policyId string) (policy.Policy, error) {
 	return p, nil
 }
 
+func (s *System) DraftFromVersion(policyId string) (policy.Policy, error) {
+	p := policy.Policy{}
+
+	client, err := s.Config.Database.GetPGXPoolClient(s.Context)
+	if err != nil {
+		return p, logs.Errorf("failed to connect to database: %v", err)
+	}
+	defer client.Close()
+
+	var basePolicyId sql.NullString
+	var version sql.NullString
+
+	if err := client.QueryRow(s.Context, `SELECT base_policy_id, version FROM policies WHERE policy_id = $1`, policyId).Scan(&basePolicyId, &version); err != nil {
+		return p, logs.Errorf("failed to load policy: %v", err)
+	}
+
+	var newPolicyId sql.NullString
+
+	if basePolicyId.Valid {
+		if err := client.QueryRow(s.Context, `SELECT create_draft_from_version($1, $2)`, basePolicyId.String, version.String).Scan(&newPolicyId); err != nil {
+			return p, logs.Errorf("failed to load policy: %v", err)
+		}
+	}
+
+	return s.LoadPolicy(newPolicyId.String)
+}
+
 func (s *System) AllPolicies() ([]policy.Policy, error) {
 	var pp []policy.Policy
 
@@ -143,7 +170,7 @@ func (s *System) AllPolicies() ([]policy.Policy, error) {
 		CreatedAt       sql.NullTime
 		UpdatedAt       sql.NullTime
 		LastPublishedAt sql.NullTime
-		IsDraft         bool
+		HasDraft        bool
 	}
 
 	for rows.Next() {
@@ -156,7 +183,7 @@ func (s *System) AllPolicies() ([]policy.Policy, error) {
 			&d.CreatedAt,
 			&d.UpdatedAt,
 			&d.LastPublishedAt,
-			&d.IsDraft,
+			&d.HasDraft,
 		); err != nil {
 			return pp, logs.Errorf("failed to load policies: %v", err)
 		}
@@ -164,8 +191,7 @@ func (s *System) AllPolicies() ([]policy.Policy, error) {
 		p := policy.Policy{
 			BaseID:    d.ID.String,
 			Name:      d.Name.String,
-			Version:   "draft",
-			IsDraft:   d.IsDraft,
+			HasDraft:  d.HasDraft,
 			UpdatedAt: d.UpdatedAt.Time,
 			CreatedAt: d.CreatedAt.Time,
 		}
