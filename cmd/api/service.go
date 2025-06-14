@@ -56,12 +56,11 @@ func main() {
 	logs.Logf("Starting %s version %s (build %s)", ServiceName, BuildVersion, BuildHash)
 	c := ConfigBuilder.NewConfigNoVault()
 
-	err := c.Build(
+	if err := c.Build(
 		ConfigBuilder.Local,
 		ConfigBuilder.Bugfixes,
 		ConfigBuilder.Postgres,
-		ConfigBuilder.WithProjectConfigurator(ProjectConfig{}))
-	if err != nil {
+		ConfigBuilder.WithProjectConfigurator(ProjectConfig{})); err != nil {
 		logs.Fatalf("Failed to build config: %v", err)
 	}
 

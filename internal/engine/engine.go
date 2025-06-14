@@ -12,7 +12,7 @@ import (
 )
 
 // EngineResponse represents the response from the policy engine
-type EngineResponse struct {
+type ER struct {
 	Result bool        `json:"result"`
 	Trace  interface{} `json:"trace"`
 	Rule   []string    `json:"rule"`
@@ -38,11 +38,11 @@ func (s *System) SetContext(ctx context.Context) *System {
 }
 
 // RunPolicy executes a policy against the engine and returns the result
-func (s *System) RunPolicyInternal(policy policymodel.Policy) (*EngineResponse, error) {
+func (s *System) RunPolicyInternal(policy policymodel.Policy) (*ER, error) {
 	return s.runPolicy(policy)
 }
 
-func (s *System) runPolicy(policy policymodel.Policy) (*EngineResponse, error) {
+func (s *System) runPolicy(policy policymodel.Policy) (*ER, error) {
 	data, err := json.Marshal(policy)
 	if err != nil {
 		return nil, err
@@ -74,7 +74,7 @@ func (s *System) runPolicy(policy policymodel.Policy) (*EngineResponse, error) {
 	}()
 
 	//var er interface{}
-	er := EngineResponse{}
+	er := ER{}
 
 	if err := json.NewDecoder(resp.Body).Decode(&er); err != nil {
 		_ = logs.Errorf("error decoding response: %v", err)
