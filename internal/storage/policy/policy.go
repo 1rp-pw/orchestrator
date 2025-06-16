@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/1rp-pw/orchestrator/internal/policy"
+	"github.com/1rp-pw/orchestrator/internal/structs"
 	"github.com/bugfixes/go-bugfixes/logs"
 	ConfigBuilder "github.com/keloran/go-config"
 )
@@ -26,7 +26,7 @@ func (s *System) SetContext(ctx context.Context) *System {
 	return s
 }
 
-func (s *System) StoreInitialPolicy(p *policy.Policy) (*policy.Policy, error) {
+func (s *System) StoreInitialPolicy(p *structs.Policy) (*structs.Policy, error) {
 	client, err := s.Config.Database.GetPGXPoolClient(s.Context)
 	if err != nil {
 		return nil, logs.Errorf("failed to connect to database: %v", err)
@@ -34,14 +34,14 @@ func (s *System) StoreInitialPolicy(p *policy.Policy) (*policy.Policy, error) {
 	defer client.Close()
 
 	if err := client.QueryRow(s.Context, `SELECT create_policy ($1, $2, $3, $4)`, p.Name, p.DataModel, p.Tests, p.Rule).Scan(&p.BaseID); err != nil {
-		return nil, logs.Errorf("failed to store initial policy: %v", err)
+		return nil, logs.Errorf("failed to store initial structs: %v", err)
 	}
 	p.Version = "draft"
 
 	return p, nil
 }
 
-func (s *System) UpdateDraft(p policy.Policy) error {
+func (s *System) UpdateDraft(p structs.Policy) error {
 	client, err := s.Config.Database.GetPGXPoolClient(s.Context)
 	if err != nil {
 		return logs.Errorf("failed to connect to database: %v", err)
@@ -54,7 +54,7 @@ func (s *System) UpdateDraft(p policy.Policy) error {
 	return nil
 }
 
-func (s *System) CreateVersion(p policy.Policy) error {
+func (s *System) CreateVersion(p structs.Policy) error {
 	client, err := s.Config.Database.GetPGXPoolClient(s.Context)
 	if err != nil {
 		return logs.Errorf("failed to connect to database: %v", err)
@@ -68,7 +68,7 @@ func (s *System) CreateVersion(p policy.Policy) error {
 	return nil
 }
 
-func (s *System) LoadPolicy(policyId string) (policy.Policy, error) {
+func (s *System) LoadPolicy(policyId string) (structs.Policy, error) {
 	type dataStruct struct {
 		Name      sql.NullString
 		BaseID    sql.NullString
@@ -82,7 +82,7 @@ func (s *System) LoadPolicy(policyId string) (policy.Policy, error) {
 
 	client, err := s.Config.Database.GetPGXPoolClient(s.Context)
 	if err != nil {
-		return policy.Policy{}, logs.Errorf("failed to connect to database: %v", err)
+		return structs.Policy{}, logs.Errorf("failed to connect to database: %v", err)
 	}
 	defer client.Close()
 	if err := client.QueryRow(s.Context, `
@@ -105,9 +105,9 @@ func (s *System) LoadPolicy(policyId string) (policy.Policy, error) {
 		&d.Rule,
 		&d.Status,
 	); err != nil {
-		return policy.Policy{}, logs.Errorf("failed to load policy: %v", err)
+		return structs.Policy{}, logs.Errorf("failed to load structs: %v", err)
 	}
-	p := policy.Policy{
+	p := structs.Policy{
 		PolicyID:  policyId,
 		BaseID:    d.BaseID.String,
 		Name:      d.Name.String,
@@ -121,8 +121,8 @@ func (s *System) LoadPolicy(policyId string) (policy.Policy, error) {
 	return p, nil
 }
 
-func (s *System) DraftFromVersion(policyId string) (policy.Policy, error) {
-	p := policy.Policy{}
+func (s *System) DraftFromVersion(policyId string) (structs.Policy, error) {
+	p := structs.Policy{}
 
 	client, err := s.Config.Database.GetPGXPoolClient(s.Context)
 	if err != nil {
@@ -134,22 +134,22 @@ func (s *System) DraftFromVersion(policyId string) (policy.Policy, error) {
 	var version sql.NullString
 
 	if err := client.QueryRow(s.Context, `SELECT base_policy_id, version FROM policies WHERE policy_id = $1`, policyId).Scan(&basePolicyId, &version); err != nil {
-		return p, logs.Errorf("failed to load policy: %v", err)
+		return p, logs.Errorf("failed to load structs: %v", err)
 	}
 
 	var newPolicyId sql.NullString
 
 	if basePolicyId.Valid {
 		if err := client.QueryRow(s.Context, `SELECT create_draft_from_version($1, $2)`, basePolicyId.String, version.String).Scan(&newPolicyId); err != nil {
-			return p, logs.Errorf("failed to load policy: %v", err)
+			return p, logs.Errorf("failed to load structs: %v", err)
 		}
 	}
 
 	return s.LoadPolicy(newPolicyId.String)
 }
 
-func (s *System) AllPolicies() ([]policy.Policy, error) {
-	var pp []policy.Policy
+func (s *System) AllPolicies() ([]structs.Policy, error) {
+	var pp []structs.Policy
 
 	client, err := s.Config.Database.GetPGXPoolClient(s.Context)
 	if err != nil {
@@ -188,7 +188,7 @@ func (s *System) AllPolicies() ([]policy.Policy, error) {
 			return pp, logs.Errorf("failed to load policies: %v", err)
 		}
 
-		p := policy.Policy{
+		p := structs.Policy{
 			BaseID:    d.ID.String,
 			Name:      d.Name.String,
 			HasDraft:  d.HasDraft,
@@ -204,8 +204,8 @@ func (s *System) AllPolicies() ([]policy.Policy, error) {
 	return pp, nil
 }
 
-func (s *System) GetPolicyVersions(basePolicyId string) ([]policy.Policy, error) {
-	var pp []policy.Policy
+func (s *System) GetPolicyVersions(basePolicyId string) ([]structs.Policy, error) {
+	var pp []structs.Policy
 
 	client, err := s.Config.Database.GetPGXPoolClient(s.Context)
 	if err != nil {
@@ -261,7 +261,7 @@ func (s *System) GetPolicyVersions(basePolicyId string) ([]policy.Policy, error)
 			return pp, logs.Errorf("failed to load policies: %v", err)
 		}
 
-		p := policy.Policy{
+		p := structs.Policy{
 			BaseID:      basePolicyId,
 			PolicyID:    d.ID.String,
 			Name:        d.Name.String,

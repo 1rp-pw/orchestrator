@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"github.com/1rp-pw/orchestrator/internal/engine"
+	"github.com/1rp-pw/orchestrator/internal/storage/flow"
 	"github.com/1rp-pw/orchestrator/internal/storage/policy"
 	"github.com/bugfixes/go-bugfixes/logs"
 	"github.com/bugfixes/go-bugfixes/middleware"
@@ -33,11 +34,11 @@ func (s *Service) Start() error {
 func (s *Service) startHTTP(errChan chan error) {
 	mux := http.NewServeMux()
 
-	// run the policy on the engine
+	// run the structs on the engine
 	mux.HandleFunc("POST /run", engine.NewSystem(s.Config).Run)
 	mux.HandleFunc("POST /run/{policyId}", engine.NewSystem(s.Config).RunPolicy)
 
-	// policy storage
+	// structs storage
 	mux.HandleFunc("POST /policy", policy.NewSystem(s.Config).CreatePolicy)
 	mux.HandleFunc("GET /policy/{policyId}/draft", policy.NewSystem(s.Config).CreateDraftFromVersion)
 	mux.HandleFunc("PUT /policy/{policyId}", policy.NewSystem(s.Config).UpdatePolicy)
@@ -63,6 +64,7 @@ func (s *Service) startHTTP(errChan chan error) {
 	mux.HandleFunc("DELETE /flow/{flowId}", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotImplemented)
 	})
+	mux.HandleFunc("POST /flow/test", flow.NewSystem(s.Config).TestFlow)
 
 	mw := middleware.NewMiddleware(context.Background())
 	mw.AddMiddleware(middleware.SetupLogger(middleware.Error).Logger)

@@ -5,20 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	policymodel "github.com/1rp-pw/orchestrator/internal/policy"
+	policymodel "github.com/1rp-pw/orchestrator/internal/structs"
 	"github.com/bugfixes/go-bugfixes/logs"
 	ConfigBuilder "github.com/keloran/go-config"
 	"net/http"
 )
-
-// EngineResponse represents the response from the policy engine
-type ER struct {
-	Result bool        `json:"result"`
-	Trace  interface{} `json:"trace"`
-	Rule   []string    `json:"rule"`
-	Data   interface{} `json:"data"`
-	Error  interface{} `json:"error"`
-}
 
 type System struct {
 	Config  *ConfigBuilder.Config
@@ -37,12 +28,12 @@ func (s *System) SetContext(ctx context.Context) *System {
 	return s
 }
 
-// RunPolicy executes a policy against the engine and returns the result
-func (s *System) RunPolicyInternal(policy policymodel.Policy) (*ER, error) {
+// RunPolicy executes a structs against the engine and returns the result
+func (s *System) RunPolicyInternal(policy policymodel.Policy) (*policymodel.EngineResponse, error) {
 	return s.runPolicy(policy)
 }
 
-func (s *System) runPolicy(policy policymodel.Policy) (*ER, error) {
+func (s *System) runPolicy(policy policymodel.Policy) (*policymodel.EngineResponse, error) {
 	data, err := json.Marshal(policy)
 	if err != nil {
 		return nil, err
@@ -74,7 +65,7 @@ func (s *System) runPolicy(policy policymodel.Policy) (*ER, error) {
 	}()
 
 	//var er interface{}
-	er := ER{}
+	er := policymodel.EngineResponse{}
 
 	if err := json.NewDecoder(resp.Body).Decode(&er); err != nil {
 		_ = logs.Errorf("error decoding response: %v", err)

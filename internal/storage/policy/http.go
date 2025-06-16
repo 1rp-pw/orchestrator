@@ -2,14 +2,14 @@ package policy
 
 import (
 	"encoding/json"
-	"github.com/1rp-pw/orchestrator/internal/policy"
+	"github.com/1rp-pw/orchestrator/internal/structs"
 	"github.com/bugfixes/go-bugfixes/logs"
 	"net/http"
 	"time"
 )
 
 func (s *System) CreatePolicy(w http.ResponseWriter, r *http.Request) {
-	var i policy.Policy
+	var i structs.Policy
 	if err := json.NewDecoder(r.Body).Decode(&i); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -19,10 +19,10 @@ func (s *System) CreatePolicy(w http.ResponseWriter, r *http.Request) {
 
 	p, err := s.StoreInitialPolicy(&i)
 	if err != nil {
-		_ = logs.Errorf("failed to store initial policy: %v", err)
+		_ = logs.Errorf("failed to store initial structs: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		if err := json.NewEncoder(w).Encode(err); err != nil {
-			_ = logs.Errorf("failed to encode policy: %v", err)
+			_ = logs.Errorf("failed to encode structs: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -30,7 +30,7 @@ func (s *System) CreatePolicy(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewEncoder(w).Encode(p); err != nil {
-		_ = logs.Errorf("failed to encode policy: %v", err)
+		_ = logs.Errorf("failed to encode structs: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -41,7 +41,7 @@ func (s *System) DeletePolicy(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *System) UpdatePolicy(w http.ResponseWriter, r *http.Request) {
-	var i policy.Policy
+	var i structs.Policy
 	if err := json.NewDecoder(r.Body).Decode(&i); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
