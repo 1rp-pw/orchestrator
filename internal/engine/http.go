@@ -2,8 +2,8 @@ package engine
 
 import (
 	"encoding/json"
-	policymodel "github.com/1rp-pw/orchestrator/internal/policy"
 	"github.com/1rp-pw/orchestrator/internal/storage/policy"
+	policymodel "github.com/1rp-pw/orchestrator/internal/structs"
 	"github.com/bugfixes/go-bugfixes/logs"
 	"io"
 	"net/http"
@@ -45,7 +45,7 @@ func (s *System) RunPolicy(w http.ResponseWriter, r *http.Request) {
 	s.Context = r.Context()
 	policyId := r.PathValue("policyId")
 
-	// get the policy from storage
+	// get the structs from storage
 	st := policy.NewSystem(s.Config).SetContext(s.Context)
 	p, err := st.LoadPolicy(policyId)
 	if err != nil {

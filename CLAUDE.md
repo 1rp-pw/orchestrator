@@ -29,7 +29,7 @@ go test ./...
 go test -cover ./...
 
 # Run tests in a specific package
-go test ./internal/storage/policy
+go test ./internal/storage/structs
 ```
 
 ### Code Quality
@@ -71,7 +71,7 @@ PORT=3000                        # HTTP port
 ENGINE_ADDRESS=localhost:9009    # Policy engine service URL
 
 # Feature Flags
-FLAGS_PROJECT_ID=policy
+FLAGS_PROJECT_ID=structs
 FLAGS_AGENT_ID=orchestrator
 FLAGS_ENVIRONMENT_ID=orchestrator
 

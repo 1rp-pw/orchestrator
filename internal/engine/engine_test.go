@@ -3,7 +3,7 @@ package engine
 import (
 	"context"
 	"fmt"
-	"github.com/1rp-pw/orchestrator/internal/policy"
+	"github.com/1rp-pw/orchestrator/internal/structs"
 	ConfigBuilder "github.com/keloran/go-config"
 	"github.com/stretchr/testify/assert"
 	"github.com/testcontainers/testcontainers-go"
@@ -38,7 +38,7 @@ func TestSystem_RunPolicy(t *testing.T) {
 	s := NewSystem(cg)
 	s.SetContext(ctx)
 
-	p := policy.Policy{
+	p := structs.Policy{
 		Data: map[string]map[string]interface{}{
 			"Person": {
 				"age":              18,

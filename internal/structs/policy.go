@@ -1,4 +1,4 @@
-package policy
+package structs
 
 import "time"
 
@@ -19,4 +19,12 @@ type Policy struct {
 	DraftID         string      `json:"draftId"`
 	Status          string      `json:"status"`
 	HasDraft        bool        `json:"hasDraft"`
+}
+
+type EngineResponse struct {
+	Result bool        `json:"result"`
+	Trace  interface{} `json:"trace"`
+	Rule   []string    `json:"rule"`
+	Data   interface{} `json:"data"`
+	Error  interface{} `json:"error"`
 }

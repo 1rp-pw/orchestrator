@@ -17,7 +17,7 @@ type ProjectConfig struct{}
 
 func (pc ProjectConfig) Build(cfg *ConfigBuilder.Config) error {
 	type FlagsService struct {
-		ProjectID     string `env:"FLAGS_PROJECT_ID" envDefault:"policy"`
+		ProjectID     string `env:"FLAGS_PROJECT_ID" envDefault:"structs"`
 		AgentID       string `env:"FLAGS_AGENT_ID" envDefault:"orchestrator"`
 		EnvironmentID string `env:"FLAGS_ENVIRONMENT_ID" envDefault:"orchestrator"`
 	}
