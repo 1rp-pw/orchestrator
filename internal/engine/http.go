@@ -2,7 +2,7 @@ package engine
 
 import (
 	"encoding/json"
-	"github.com/1rp-pw/orchestrator/internal/storage/policy"
+	"github.com/1rp-pw/orchestrator/internal/policy"
 	policymodel "github.com/1rp-pw/orchestrator/internal/structs"
 	"github.com/bugfixes/go-bugfixes/logs"
 	"io"
