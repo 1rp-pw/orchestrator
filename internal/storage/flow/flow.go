@@ -28,7 +28,7 @@ func (s *System) SetContext(ctx context.Context) *System {
 
 func (s *System) RunTestFlow(f structs.FlowRequest) (structs.FlowResponse, error) {
 	fr := structs.FlowResponse{
-		NodeResponse: make([]structs.EngineResponse, 0),
+		NodeResponse: make([]structs.FlowNodeResponse, 0),
 	}
 
 	flow := f.Flow
@@ -49,8 +49,8 @@ func (s *System) RunTestFlow(f structs.FlowRequest) (structs.FlowResponse, error
 }
 
 // executeNode recursively executes a flow node and all its children
-func (s *System) executeNode(node structs.FlowNode, data interface{}) (interface{}, []structs.EngineResponse, error) {
-	var allResponses []structs.EngineResponse
+func (s *System) executeNode(node structs.FlowNode, data interface{}) (interface{}, []structs.FlowNodeResponse, error) {
+	var allResponses []structs.FlowNodeResponse
 
 	switch node.Type {
 	case "start", "policy":
@@ -60,7 +60,11 @@ func (s *System) executeNode(node structs.FlowNode, data interface{}) (interface
 			return nil, nil, logs.Errorf("failed to execute policy node %s: %v", node.ID, err)
 		}
 
-		allResponses = append(allResponses, response)
+		allResponses = append(allResponses, structs.FlowNodeResponse{
+			NodeID:   node.ID,
+			NodeType: node.Type,
+			Response: response,
+		})
 
 		// Parse the result based on ReturnValue
 		result := s.returnParse(response.Result, node.ReturnValue)
@@ -118,7 +122,11 @@ func (s *System) executeNode(node structs.FlowNode, data interface{}) (interface
 			Data:   data,
 			Error:  nil,
 		}
-		allResponses = append(allResponses, customResponse)
+		allResponses = append(allResponses, structs.FlowNodeResponse{
+			NodeID:   node.ID,
+			NodeType: node.Type,
+			Response: customResponse,
+		})
 
 		// Continue with next nodes if any
 		var nextNodes []structs.FlowNode
