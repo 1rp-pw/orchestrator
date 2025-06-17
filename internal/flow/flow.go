@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/1rp-pw/orchestrator/internal/engine"
-	"github.com/1rp-pw/orchestrator/internal/storage/policy"
+	"github.com/1rp-pw/orchestrator/internal/policy"
 	"github.com/1rp-pw/orchestrator/internal/structs"
 	"github.com/bugfixes/go-bugfixes/logs"
 	ConfigBuilder "github.com/keloran/go-config"
@@ -114,7 +114,7 @@ func (s *System) executeNode(node structs.FlowNode, data interface{}) (interface
 				},
 			},
 		}
-		
+
 		customResponse := structs.EngineResponse{
 			Result: true,
 			Trace:  customTrace,
@@ -137,7 +137,7 @@ func (s *System) executeNode(node structs.FlowNode, data interface{}) (interface
 		if len(nextNodes) == 0 {
 			return *node.Outcome, allResponses, nil
 		}
-		
+
 		// Otherwise, continue with next nodes
 		var result interface{} = *node.Outcome
 		for _, nextNode := range nextNodes {
