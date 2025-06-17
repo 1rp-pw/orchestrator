@@ -31,7 +31,7 @@ func (s *System) TestFlow(w http.ResponseWriter, r *http.Request) {
 	fr, err := s.RunTestFlow(t)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		_ = logs.Errorf("error running test flow: %v", err)
+		// _ = logs.Errorf("error running test flow: %v", err)
 		return
 	}
 

@@ -38,7 +38,7 @@ func (s *System) RunTestFlow(f structs.FlowRequest) (structs.FlowResponse, error
 	for _, startNode := range flow.Flow.Start {
 		result, responses, err := s.executeNode(startNode, data)
 		if err != nil {
-			return structs.FlowResponse{}, logs.Errorf("failed to execute flow: %v", err)
+			return structs.FlowResponse{}, fmt.Errorf("failed to execute flow: %v", err)
 		}
 
 		fr.NodeResponse = append(fr.NodeResponse, responses...)
@@ -54,6 +54,10 @@ func (s *System) executeNode(node structs.FlowNode, data interface{}) (interface
 
 	switch node.Type {
 	case "start", "policy":
+		if node.PolicyID == "" {
+			return nil, nil, fmt.Errorf("policyId is required for start and policy nodes")
+		}
+
 		// Execute policy (start nodes also have policyId)
 		response, err := s.flowPolicy(node.PolicyID, data)
 		if err != nil {
