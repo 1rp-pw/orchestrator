@@ -2,7 +2,6 @@ package flow
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/1rp-pw/orchestrator/internal/structs"
 	"github.com/bugfixes/go-bugfixes/logs"
 	"net/http"
@@ -35,9 +34,6 @@ func (s *System) TestFlow(w http.ResponseWriter, r *http.Request) {
 		_ = logs.Errorf("error running test flow: %v", err)
 		return
 	}
-
-	fmt.Printf("%+v\n", fr)
-	fmt.Printf("%+v\n", t)
 
 	if err := json.NewEncoder(w).Encode(fr); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
