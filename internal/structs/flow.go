@@ -33,6 +33,12 @@ type FlowMetadata struct {
 }
 
 type FlowResponse struct {
-	Result       interface{}      `json:"result"`
-	NodeResponse []EngineResponse `json:"nodeResponse"`
+	Result       interface{}        `json:"result"`
+	NodeResponse []FlowNodeResponse `json:"nodeResponse"`
+}
+
+type FlowNodeResponse struct {
+	NodeID   string         `json:"nodeId"`
+	NodeType string         `json:"nodeType"`
+	Response EngineResponse `json:"response"`
 }
