@@ -156,7 +156,17 @@ func (s *System) AllPolicies() ([]structs.Policy, error) {
 		return pp, logs.Errorf("failed to connect to database: %v", err)
 	}
 	defer client.Close()
-	rows, err := client.Query(s.Context, "SELECT base_policy_id, current_name, version_count, draft_id, first_created_date, latest_activity_date, latest_version_date, has_draft FROM public.policy_summary")
+	rows, err := client.Query(s.Context, `
+		SELECT 
+		    base_policy_id, 
+		    current_name, 
+		    version_count, 
+		    draft_id, 
+		    first_created_date, 
+		    latest_activity_date, 
+		    latest_version_date, 
+		    has_draft 
+		FROM public.policy_summary`)
 	if err != nil {
 		return pp, logs.Errorf("failed to load policies: %v", err)
 	}

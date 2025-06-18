@@ -2,8 +2,10 @@ package flow
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"github.com/1rp-pw/orchestrator/internal/engine"
+	"github.com/1rp-pw/orchestrator/internal/errors"
 	"github.com/1rp-pw/orchestrator/internal/policy"
 	"github.com/1rp-pw/orchestrator/internal/structs"
 	"github.com/bugfixes/go-bugfixes/logs"
@@ -26,7 +28,7 @@ func (s *System) SetContext(ctx context.Context) *System {
 	return s
 }
 
-func (s *System) RunTestFlow(f structs.FlowRequest) (structs.FlowResponse, error) {
+func (s *System) RunTestFlow(f structs.FlowTestRequest) (structs.FlowResponse, error) {
 	fr := structs.FlowResponse{
 		NodeResponse: make([]structs.FlowNodeResponse, 0),
 	}
@@ -38,7 +40,7 @@ func (s *System) RunTestFlow(f structs.FlowRequest) (structs.FlowResponse, error
 	for _, startNode := range flow.Flow.Start {
 		result, responses, err := s.executeNode(startNode, data)
 		if err != nil {
-			return structs.FlowResponse{}, fmt.Errorf("failed to execute flow: %v", err)
+			return structs.FlowResponse{}, fmt.Errorf("failed to execute flow: %w", err)
 		}
 
 		fr.NodeResponse = append(fr.NodeResponse, responses...)
@@ -55,7 +57,7 @@ func (s *System) executeNode(node structs.FlowNode, data interface{}) (interface
 	switch node.Type {
 	case "start", "policy":
 		if node.PolicyID == "" {
-			return nil, nil, fmt.Errorf("policyId is required for start and policy nodes")
+			return nil, nil, errors.WrapFlowError(errors.ErrMissingPolicyID, "", node.ID)
 		}
 
 		// Execute policy (start nodes also have policyId)
@@ -189,4 +191,152 @@ func (s *System) flowPolicy(policyId string, data interface{}) (structs.EngineRe
 	}
 
 	return *pr, nil
+}
+
+func (s *System) AllFlows() ([]structs.StoredFlow, error) {
+	var ff []structs.StoredFlow
+	client, err := s.Config.Database.GetPGXPoolClient(s.Context)
+	if err != nil {
+		return ff, logs.Errorf("failed to connect to database: %v", err)
+	}
+	defer client.Close()
+	rows, err := client.Query(s.Context, `
+		SELECT 
+			base_flow_id,
+			current_name,
+			version_count,
+			draft_id,
+			first_created_date,
+			latest_version_date,
+			latest_activity_date,
+			has_draft
+		FROM public.flow_summary`)
+	if err != nil {
+		return ff, logs.Errorf("failed to query flows: %v", err)
+	}
+	defer rows.Close()
+
+	type dataStruct struct {
+		FlowBaseID         sql.NullString
+		CurrentName        sql.NullString
+		VersionCount       sql.NullInt32
+		DraftID            sql.NullString
+		FirstCreatedDate   sql.NullTime
+		LatestVersionDate  sql.NullTime
+		LatestActivityDate sql.NullTime
+		HasDraft           sql.NullBool
+	}
+
+	for rows.Next() {
+		d := dataStruct{}
+		if err := rows.Scan(
+			&d.FlowBaseID,
+			&d.CurrentName,
+			&d.VersionCount,
+			&d.DraftID,
+			&d.FirstCreatedDate,
+			&d.LatestActivityDate,
+			&d.LatestVersionDate,
+			&d.HasDraft,
+		); err != nil {
+			return ff, logs.Errorf("failed to load flows: %v", err)
+		}
+
+		f := structs.StoredFlow{
+			BaseID:    d.FlowBaseID.String,
+			Name:      d.CurrentName.String,
+			HasDraft:  d.HasDraft.Bool,
+			UpdatedAt: d.LatestActivityDate.Time,
+			CreatedAt: d.FirstCreatedDate.Time,
+		}
+		if d.LatestVersionDate.Valid {
+			f.LastPublishedAt = d.LatestVersionDate.Time
+		}
+		ff = append(ff, f)
+	}
+
+	return ff, nil
+}
+
+func (s *System) GetFlowVersions(baseFlowId string) ([]structs.StoredFlow, error) {
+	var ff []structs.StoredFlow
+
+	client, err := s.Config.Database.GetPGXPoolClient(s.Context)
+	if err != nil {
+		return ff, logs.Errorf("failed to connect to database: %v", err)
+	}
+	defer client.Close()
+	rows, err := client.Query(s.Context, `
+		SELECT
+			flow_id,
+			name,
+			version,
+			flow,
+			nodes,
+			edges,
+			description,
+			status,
+			created_at,
+			updated_at
+		FROM flows
+		WHERE base_flow_id = $1
+		ORDER BY
+			CASE WHEN status = 'draft' THEN 0 ELSE 1 END,
+			CASE WHEN version IS NULL THEN '' ELSE version END`, baseFlowId)
+	if err != nil {
+		return ff, logs.Errorf("failed to load flows: %v", err)
+	}
+	defer rows.Close()
+
+	type dataStruct struct {
+		FlowID      sql.NullString
+		Name        sql.NullString
+		Version     sql.NullString
+		Flow        sql.NullString
+		Nodes       sql.NullString
+		Edges       sql.NullString
+		Description sql.NullString
+		Status      sql.NullString
+		CreatedAt   sql.NullTime
+		UpdatedAt   sql.NullTime
+	}
+	for rows.Next() {
+		d := dataStruct{}
+		if err := rows.Scan(
+			&d.FlowID,
+			&d.Name,
+			&d.Version,
+			&d.Flow,
+			&d.Nodes,
+			&d.Edges,
+			&d.Description,
+			&d.Status,
+			&d.CreatedAt,
+			&d.UpdatedAt,
+		); err != nil {
+			return ff, logs.Errorf("failed to load flows: %v", err)
+		}
+
+		f := structs.StoredFlow{
+			BaseID:      baseFlowId,
+			FlowID:      d.FlowID.String,
+			Name:        d.Name.String,
+			Description: d.Description.String,
+			Nodes:       d.Nodes.String,
+			Edges:       d.Edges.String,
+			Status:      d.Status.String,
+			CreatedAt:   d.CreatedAt.Time,
+			UpdatedAt:   d.UpdatedAt.Time,
+		}
+		if d.Status.String == "draft" {
+			f.IsDraft = true
+		}
+		if d.Version.String != "" {
+			f.Version = d.Version.String
+		}
+
+		ff = append(ff, f)
+	}
+
+	return ff, nil
 }
