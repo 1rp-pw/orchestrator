@@ -66,6 +66,8 @@ func (s *System) CreateFlow(w http.ResponseWriter, r *http.Request) {
 	if err := yaml.Unmarshal([]byte(f.JSONFlow), &f.Flow); err != nil {
 		errors.WriteHTTPError(w, errors.NewValidationError("jsonFlow", "invalid YAML flow format"))
 	}
+
+	logs.Debugf("flow: %+v", f)
 }
 
 func (s *System) ListFlowVersions(w http.ResponseWriter, r *http.Request) {

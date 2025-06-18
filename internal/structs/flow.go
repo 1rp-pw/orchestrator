@@ -12,6 +12,8 @@ type FlowRequest struct {
 	Tests    interface{} `json:"tests"`
 	Name     string      `json:"name"`
 	JSONFlow string      `json:"flow"`
+	Nodes    interface{} `json:"nodes"`
+	Edges    interface{} `json:"edges"`
 	Flow     FlowConfig
 }
 
