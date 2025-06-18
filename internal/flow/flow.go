@@ -340,3 +340,16 @@ func (s *System) GetFlowVersions(baseFlowId string) ([]structs.StoredFlow, error
 
 	return ff, nil
 }
+
+func (s *System) StoreInitialFlow(f *structs.StoredFlow) (*structs.StoredFlow, error) {
+	client, err := s.Config.Database.GetPGXPoolClient(s.Context)
+	if err != nil {
+		return f, logs.Errorf("failed to connect to database: %v", err)
+	}
+	defer client.Close()
+
+	if err := client.QueryRow(s.Context, `SELECT create_flow($1, $2, $3, $4, $5)`, f.Name, f.Nodes, f.Edges, f.Tests, f.FlatYAML).Scan(&f.FlowID); err != nil {
+		return nil, logs.Errorf("failed to store initial structs: %v", err)
+	}
+	return f, nil
+}

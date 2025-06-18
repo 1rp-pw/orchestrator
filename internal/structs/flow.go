@@ -4,14 +4,14 @@ import "time"
 
 type FlowTestRequest struct {
 	Data     interface{} `json:"data"`
-	JSONFlow string      `json:"flow"`
+	FlowYAML string      `json:"flow"`
 	Flow     FlowConfig
 }
 
 type FlowRequest struct {
 	Tests    interface{} `json:"tests"`
 	Name     string      `json:"name"`
-	JSONFlow string      `json:"flow"`
+	FlowYAML string      `json:"flowFlat"`
 	Nodes    interface{} `json:"nodes"`
 	Edges    interface{} `json:"edges"`
 	Flow     FlowConfig
@@ -32,6 +32,7 @@ type StoredFlow struct {
 	UpdatedAt       time.Time   `yaml:"updatedAt" json:"updatedAt"`
 	LastPublishedAt time.Time   `yaml:"lastPublishedAt" json:"lastPublishedAt"`
 	HasDraft        bool        `yaml:"hasDraft" json:"hasDraft"`
+	FlatYAML        string      `yaml:"flowFlat" json:"flowFlat"`
 	FlowConfig      FlowConfig
 }
 

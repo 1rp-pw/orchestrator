@@ -6,6 +6,7 @@ import (
 	"github.com/1rp-pw/orchestrator/internal/structs"
 	"github.com/bugfixes/go-bugfixes/logs"
 	"net/http"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -23,8 +24,8 @@ func (s *System) TestFlow(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := yaml.Unmarshal([]byte(t.JSONFlow), &t.Flow); err != nil {
-		errors.WriteHTTPError(w, errors.NewValidationError("jsonFlow", "invalid YAML flow format"))
+	if err := yaml.Unmarshal([]byte(t.FlowYAML), &t.Flow); err != nil {
+		errors.WriteHTTPError(w, errors.NewValidationError("flow", "invalid YAML flow format"))
 		return
 	}
 
@@ -63,11 +64,29 @@ func (s *System) CreateFlow(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := yaml.Unmarshal([]byte(f.JSONFlow), &f.Flow); err != nil {
-		errors.WriteHTTPError(w, errors.NewValidationError("jsonFlow", "invalid YAML flow format"))
+	if err := yaml.Unmarshal([]byte(f.FlowYAML), &f.Flow); err != nil {
+		errors.WriteHTTPError(w, errors.NewValidationError("flow", "invalid YAML flow format"))
 	}
 
-	logs.Debugf("flow: %+v", f)
+	sf := structs.StoredFlow{
+		CreatedAt:  time.Now(),
+		Version:    "draft",
+		Name:       f.Name,
+		Nodes:      f.Nodes,
+		Edges:      f.Edges,
+		FlatYAML:   f.FlowYAML,
+		FlowConfig: f.Flow,
+		Tests:      f.Tests,
+	}
+	rf, err := s.StoreInitialFlow(&sf)
+	if err != nil {
+		errors.WriteHTTPError(w, err)
+		return
+	}
+
+	if err := json.NewEncoder(w).Encode(rf); err != nil {
+		errors.WriteHTTPError(w, errors.NewInternalError("failed to encode response"))
+	}
 }
 
 func (s *System) ListFlowVersions(w http.ResponseWriter, r *http.Request) {
