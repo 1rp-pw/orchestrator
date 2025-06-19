@@ -66,6 +66,7 @@ func (s *Service) startHTTP(errChan chan error) {
 		w.WriteHeader(http.StatusNotImplemented)
 	})
 	mux.HandleFunc("POST /flow/test", flow.NewSystem(s.Config).TestFlow)
+	mux.HandleFunc("POST /flow/{flowId}", flow.NewSystem(s.Config).RunFlow)
 
 	mw := middleware.NewMiddleware(context.Background())
 	mw.AddMiddleware(middleware.SetupLogger(middleware.Error).Logger)

@@ -103,3 +103,28 @@ func (s *System) ListFlowVersions(w http.ResponseWriter, r *http.Request) {
 		errors.WriteHTTPError(w, errors.NewInternalError("failed to encode response"))
 	}
 }
+
+func (s *System) RunFlow(w http.ResponseWriter, r *http.Request) {
+	s.SetContext(r.Context())
+	flowId := r.PathValue("flowId")
+
+	f, err := s.GetFlow(flowId)
+	if err != nil {
+		errors.WriteHTTPError(w, err)
+		return
+	}
+
+	var flowRequest interface{}
+	if err := json.NewDecoder(r.Body).Decode(&flowRequest); err != nil {
+		errors.WriteHTTPError(w, errors.NewValidationError("body", "invalid JSON format"))
+		return
+	}
+
+	flowResult, err := s.RunFlowInternal(*f, flowRequest)
+	if err != nil {
+		errors.WriteHTTPError(w, err)
+	}
+	if err := json.NewEncoder(w).Encode(flowResult); err != nil {
+		errors.WriteHTTPError(w, errors.NewInternalError("failed to encode response"))
+	}
+}

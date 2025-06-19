@@ -10,6 +10,7 @@ import (
 	"github.com/1rp-pw/orchestrator/internal/structs"
 	"github.com/bugfixes/go-bugfixes/logs"
 	ConfigBuilder "github.com/keloran/go-config"
+	"gopkg.in/yaml.v3"
 )
 
 type System struct {
@@ -29,14 +30,17 @@ func (s *System) SetContext(ctx context.Context) *System {
 }
 
 func (s *System) RunTestFlow(f structs.FlowTestRequest) (structs.FlowResponse, error) {
+	flow := f.Flow
+	data := f.Data
+
+	return s.RunFlowInternal(flow, data)
+}
+
+func (s *System) RunFlowInternal(flow structs.FlowConfig, data interface{}) (structs.FlowResponse, error) {
 	fr := structs.FlowResponse{
 		NodeResponse: make([]structs.FlowNodeResponse, 0),
 	}
 
-	flow := f.Flow
-	data := f.Data
-
-	// Execute all start nodes
 	for _, startNode := range flow.Flow.Start {
 		result, responses, err := s.executeNode(startNode, data)
 		if err != nil {
@@ -351,5 +355,31 @@ func (s *System) StoreInitialFlow(f *structs.StoredFlow) (*structs.StoredFlow, e
 	if err := client.QueryRow(s.Context, `SELECT create_flow($1, $2, $3, $4, $5)`, f.Name, f.Nodes, f.Edges, f.Tests, f.FlatYAML).Scan(&f.FlowID); err != nil {
 		return nil, logs.Errorf("failed to store initial structs: %v", err)
 	}
+
+	if err := client.QueryRow(s.Context, `SELECT base_flow_id FROM flows WHERE flow_id = $1`, f.FlowID).Scan(&f.BaseID); err != nil {
+		return nil, logs.Errorf("failed to store initial structs: %v", err)
+	}
+	f.Version = "draft"
+
 	return f, nil
+}
+
+func (s *System) GetFlow(flowId string) (*structs.FlowConfig, error) {
+	client, err := s.Config.Database.GetPGXPoolClient(s.Context)
+	if err != nil {
+		return nil, logs.Errorf("failed to connect to database: %v", err)
+	}
+	defer client.Close()
+	var f structs.FlowConfig
+	var x interface{}
+
+	if err := client.QueryRow(s.Context, `SELECT flow FROM flows WHERE flow_id = $1`, flowId).Scan(&x); err != nil {
+		return nil, logs.Errorf("failed to get flow: %v", err)
+	}
+
+	if err := yaml.Unmarshal([]byte(x.(string)), &f); err != nil {
+		return nil, logs.Errorf("failed to unmarshal flow: %v", err)
+	}
+
+	return &f, nil
 }
