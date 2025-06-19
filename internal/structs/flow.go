@@ -19,7 +19,7 @@ type FlowRequest struct {
 
 type StoredFlow struct {
 	BaseID          string      `yaml:"baseId" json:"baseId"`
-	FlowID          string      `yaml:"flowId" json:"flowId"`
+	FlowID          string      `yaml:"id" json:"id"`
 	Name            string      `yaml:"name" json:"name"`
 	Description     string      `yaml:"description" json:"description"`
 	Nodes           interface{} `yaml:"nodes" json:"nodes"`
