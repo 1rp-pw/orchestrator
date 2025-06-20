@@ -9,6 +9,8 @@ import (
 )
 
 func (s *System) CreatePolicy(w http.ResponseWriter, r *http.Request) {
+	s.SetContext(r.Context())
+
 	var i structs.Policy
 	if err := json.NewDecoder(r.Body).Decode(&i); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -95,6 +97,7 @@ func (s *System) GetPolicyVersion(w http.ResponseWriter, r *http.Request) {
 
 func (s *System) ListPolicyVersions(w http.ResponseWriter, r *http.Request) {
 	policyId := r.PathValue("policyId")
+	s.SetContext(r.Context())
 
 	p, err := s.GetPolicyVersions(policyId)
 	if err != nil {
@@ -108,6 +111,8 @@ func (s *System) ListPolicyVersions(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *System) GetAllPolicies(w http.ResponseWriter, r *http.Request) {
+	s.SetContext(r.Context())
+
 	p, err := s.AllPolicies()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

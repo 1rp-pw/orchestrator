@@ -2,10 +2,38 @@ package structs
 
 import "time"
 
-type FlowRequest struct {
+type FlowTestRequest struct {
 	Data     interface{} `json:"data"`
-	JSONFlow string      `json:"flow"`
+	FlowYAML string      `json:"flow"`
 	Flow     FlowConfig
+}
+
+type FlowRequest struct {
+	Tests    interface{} `json:"tests"`
+	Name     string      `json:"name"`
+	FlowYAML string      `json:"flowFlat"`
+	Nodes    interface{} `json:"nodes"`
+	Edges    interface{} `json:"edges"`
+	Flow     FlowConfig
+}
+
+type StoredFlow struct {
+	BaseID          string      `yaml:"baseId" json:"baseId"`
+	FlowID          string      `yaml:"id" json:"id"`
+	Name            string      `yaml:"name" json:"name"`
+	Description     string      `yaml:"description" json:"description"`
+	Nodes           interface{} `yaml:"nodes" json:"nodes"`
+	Edges           interface{} `yaml:"edges" json:"edges"`
+	Tests           interface{} `yaml:"tests" json:"tests"`
+	Version         string      `yaml:"version" json:"version"`
+	IsDraft         bool        `yaml:"draft" json:"draft"`
+	Status          string      `yaml:"status" json:"status"`
+	CreatedAt       time.Time   `yaml:"createdAt" json:"createdAt"`
+	UpdatedAt       time.Time   `yaml:"updatedAt" json:"updatedAt"`
+	LastPublishedAt time.Time   `yaml:"lastPublishedAt" json:"lastPublishedAt"`
+	HasDraft        bool        `yaml:"hasDraft" json:"hasDraft"`
+	FlatYAML        string      `yaml:"flowFlat" json:"flowFlat"`
+	FlowConfig      FlowConfig
 }
 
 type FlowConfig struct {
