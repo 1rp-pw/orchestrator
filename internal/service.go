@@ -52,13 +52,7 @@ func (s *Service) startHTTP(errChan chan error) {
 	mux.HandleFunc("GET /flows", flow.NewSystem(s.Config).GetAllFlows)
 	mux.HandleFunc("POST /flow", flow.NewSystem(s.Config).CreateFlow)
 	mux.HandleFunc("GET /flow/{flowId}/versions", flow.NewSystem(s.Config).ListFlowVersions)
-
-	mux.HandleFunc("GET /flow", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNotImplemented)
-	})
-	mux.HandleFunc("GET /flow/{flowId}", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNotImplemented)
-	})
+	mux.HandleFunc("GET /flow/{flowId}", flow.NewSystem(s.Config).GetFlow)
 	mux.HandleFunc("PUT /flow/{flowId}", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotImplemented)
 	})

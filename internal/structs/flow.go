@@ -1,6 +1,9 @@
 package structs
 
-import "time"
+import (
+	"database/sql"
+	"time"
+)
 
 type FlowTestRequest struct {
 	Data     interface{} `json:"data"`
@@ -18,21 +21,23 @@ type FlowRequest struct {
 }
 
 type StoredFlow struct {
-	BaseID          string      `yaml:"baseId" json:"baseId"`
-	FlowID          string      `yaml:"id" json:"id"`
-	Name            string      `yaml:"name" json:"name"`
-	Description     string      `yaml:"description" json:"description"`
+	BaseID          string `yaml:"baseId" json:"baseId"`
+	FlowID          string `yaml:"id" json:"id"`
+	Name            string `yaml:"name" json:"name"`
+	Description     string `yaml:"description" json:"description"`
+	DescNull        sql.NullString
 	Nodes           interface{} `yaml:"nodes" json:"nodes"`
 	Edges           interface{} `yaml:"edges" json:"edges"`
 	Tests           interface{} `yaml:"tests" json:"tests"`
 	Version         string      `yaml:"version" json:"version"`
-	IsDraft         bool        `yaml:"draft" json:"draft"`
-	Status          string      `yaml:"status" json:"status"`
-	CreatedAt       time.Time   `yaml:"createdAt" json:"createdAt"`
-	UpdatedAt       time.Time   `yaml:"updatedAt" json:"updatedAt"`
-	LastPublishedAt time.Time   `yaml:"lastPublishedAt" json:"lastPublishedAt"`
-	HasDraft        bool        `yaml:"hasDraft" json:"hasDraft"`
-	FlatYAML        string      `yaml:"flowFlat" json:"flowFlat"`
+	VerNull         sql.NullString
+	IsDraft         bool      `yaml:"draft" json:"draft"`
+	Status          string    `yaml:"status" json:"status"`
+	CreatedAt       time.Time `yaml:"createdAt" json:"createdAt"`
+	UpdatedAt       time.Time `yaml:"updatedAt" json:"updatedAt"`
+	LastPublishedAt time.Time `yaml:"lastPublishedAt" json:"lastPublishedAt"`
+	HasDraft        bool      `yaml:"hasDraft" json:"hasDraft"`
+	FlatYAML        string    `yaml:"flowFlat" json:"flowFlat"`
 	FlowConfig      FlowConfig
 }
 
