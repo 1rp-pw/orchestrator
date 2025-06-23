@@ -364,7 +364,7 @@ func (s *System) StoreInitialFlow(f *structs.StoredFlow) (*structs.StoredFlow, e
 	return f, nil
 }
 
-func (s *System) GetFlow(flowId string) (*structs.FlowConfig, error) {
+func (s *System) GetStoredFlow(flowId string) (*structs.FlowConfig, error) {
 	client, err := s.Config.Database.GetPGXPoolClient(s.Context)
 	if err != nil {
 		return nil, logs.Errorf("failed to connect to database: %v", err)
@@ -379,6 +379,54 @@ func (s *System) GetFlow(flowId string) (*structs.FlowConfig, error) {
 
 	if err := yaml.Unmarshal([]byte(x.(string)), &f); err != nil {
 		return nil, logs.Errorf("failed to unmarshal flow: %v", err)
+	}
+
+	return &f, nil
+}
+
+func (s *System) GetFullFlow(flowId string) (*structs.StoredFlow, error) {
+	client, err := s.Config.Database.GetPGXPoolClient(s.Context)
+	if err != nil {
+		return nil, logs.Errorf("failed to connect to database: %v", err)
+	}
+	defer client.Close()
+	var f structs.StoredFlow
+
+	if err := client.QueryRow(s.Context, `
+		SELECT 
+		    base_flow_id, 
+		    description, 
+		    name, 
+		    flow, 
+		    nodes, 
+		    edges, 
+		    tests,
+		    version,
+		    status,
+		    created_at,
+		    updated_at
+		FROM flows 
+		WHERE flow_id = $1`,
+		flowId).Scan(
+		&f.BaseID,
+		&f.DescNull,
+		&f.Name,
+		&f.FlatYAML,
+		&f.Nodes,
+		&f.Edges,
+		&f.Tests,
+		&f.VerNull,
+		&f.Status,
+		&f.CreatedAt,
+		&f.UpdatedAt); err != nil {
+		return nil, logs.Errorf("failed to get flow: %v", err)
+	}
+	f.FlowID = flowId
+	if f.DescNull.Valid {
+		f.Description = f.DescNull.String
+	}
+	if f.VerNull.Valid {
+		f.Version = f.VerNull.String
 	}
 
 	return &f, nil
