@@ -198,3 +198,17 @@ func (s *System) UpdateFlow(w http.ResponseWriter, r *http.Request) {
 		errors.WriteHTTPError(w, errors.NewInternalError("failed to encode response"))
 	}
 }
+
+func (s *System) CreateDraftFromVersion(w http.ResponseWriter, r *http.Request) {
+	s.SetContext(r.Context())
+	flowId := r.PathValue("flowId")
+	f, err := s.DraftFromVersion(flowId)
+	if err != nil {
+		errors.WriteHTTPError(w, err)
+		return
+	}
+
+	if err := json.NewEncoder(w).Encode(f); err != nil {
+		errors.WriteHTTPError(w, errors.NewInternalError("failed to encode response"))
+	}
+}

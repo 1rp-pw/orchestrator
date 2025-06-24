@@ -466,3 +466,27 @@ func (s *System) GetFullFlow(flowId string) (*structs.StoredFlow, error) {
 
 	return &f, nil
 }
+
+func (s *System) DraftFromVersion(flowId string) (*structs.StoredFlow, error) {
+	client, err := s.Config.Database.GetPGXPoolClient(s.Context)
+	if err != nil {
+		return nil, logs.Errorf("failed to connect to database: %v", err)
+	}
+	defer client.Close()
+
+	var baseFlowId sql.NullString
+	var version sql.NullString
+
+	if err := client.QueryRow(s.Context, `SELECT base_flow_id, version FROM flows WHERE flow_id = $1`, flowId).Scan(&baseFlowId, &version); err != nil {
+		return nil, logs.Errorf("failed to get flow: %v", err)
+	}
+
+	var newFlowId sql.NullString
+	if baseFlowId.Valid {
+		if err := client.QueryRow(s.Context, `SELECT create_draft_flow_from_version($1, $2)`, baseFlowId.String, version.String).Scan(&newFlowId); err != nil {
+			return nil, logs.Errorf("failed to get flow: %v", err)
+		}
+	}
+
+	return s.GetFullFlow(newFlowId.String)
+}
