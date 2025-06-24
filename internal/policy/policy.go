@@ -118,6 +118,10 @@ func (s *System) LoadPolicy(policyId string) (structs.Policy, error) {
 		Status:    d.Status.String,
 	}
 
+	if d.Status.String == "draft" {
+		p.IsDraft = true
+	}
+
 	return p, nil
 }
 

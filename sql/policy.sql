@@ -77,7 +77,7 @@ BEGIN
     VALUES (new_base_policy_id, p_name, p_data_model, p_tests, p_rule, 'draft')
     RETURNING policy_id INTO new_policy_id;
 
-    RETURN new_policy_id;
+    RETURN new_base_policy_id;
 END;
 $$ LANGUAGE plpgsql;
 
