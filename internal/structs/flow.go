@@ -12,6 +12,8 @@ type FlowTestRequest struct {
 }
 
 type FlowRequest struct {
+	ID       string      `json:"id"`
+	BaseID   string      `json:"baseId"`
 	Tests    interface{} `json:"tests"`
 	Name     string      `json:"name"`
 	FlowYAML string      `json:"flowFlat"`

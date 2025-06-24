@@ -364,6 +364,20 @@ func (s *System) StoreInitialFlow(f *structs.StoredFlow) (*structs.StoredFlow, e
 	return f, nil
 }
 
+func (s *System) StoreFlow(f *structs.StoredFlow) (*structs.StoredFlow, error) {
+	client, err := s.Config.Database.GetPGXPoolClient(s.Context)
+	if err != nil {
+		return f, logs.Errorf("failed to connect to database: %v", err)
+	}
+	defer client.Close()
+
+	if _, err := client.Exec(s.Context, `SELECT update_draft_flow($1, $2, $3, $4, $5, $6)`, f.BaseID, f.Nodes, f.Edges, f.Tests, f.FlatYAML, f.Description); err != nil {
+		return nil, logs.Errorf("failed to store initial structs: %v", err)
+	}
+
+	return f, nil
+}
+
 func (s *System) GetStoredFlow(flowId string) (*structs.FlowConfig, error) {
 	client, err := s.Config.Database.GetPGXPoolClient(s.Context)
 	if err != nil {
