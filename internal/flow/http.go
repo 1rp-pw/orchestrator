@@ -160,24 +160,55 @@ func (s *System) UpdateFlow(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sf := structs.StoredFlow{
-		UpdatedAt:  time.Now(),
-		Version:    "draft",
-		Name:       f.Name,
-		Nodes:      f.Nodes,
-		Edges:      f.Edges,
-		FlatYAML:   f.FlowYAML,
-		FlowConfig: f.Flow,
-		Tests:      f.Tests,
-		BaseID:     f.BaseID,
-		FlowID:     f.ID,
+		UpdatedAt:   time.Now(),
+		Version:     "draft",
+		Name:        f.Name,
+		Nodes:       f.Nodes,
+		Edges:       f.Edges,
+		FlatYAML:    f.FlowYAML,
+		FlowConfig:  f.Flow,
+		Tests:       f.Tests,
+		BaseID:      f.BaseID,
+		FlowID:      f.ID,
+		Description: f.Description,
 	}
-	rf, err := s.StoreFlow(&sf)
+	if f.Status == "published" {
+		sf.Version = f.Version
+	}
+
+	var rf interface{}
+
+	if f.Status != "draft" {
+		rff, err := s.CreateVersion(&sf)
+		if err != nil {
+			errors.WriteHTTPError(w, err)
+			return
+		}
+		rf = rff
+	} else {
+		rff, err := s.StoreFlow(&sf)
+		if err != nil {
+			errors.WriteHTTPError(w, err)
+			return
+		}
+		rf = rff
+	}
+
+	if err := json.NewEncoder(w).Encode(rf); err != nil {
+		errors.WriteHTTPError(w, errors.NewInternalError("failed to encode response"))
+	}
+}
+
+func (s *System) CreateDraftFromVersion(w http.ResponseWriter, r *http.Request) {
+	s.SetContext(r.Context())
+	flowId := r.PathValue("flowId")
+	f, err := s.DraftFromVersion(flowId)
 	if err != nil {
 		errors.WriteHTTPError(w, err)
 		return
 	}
 
-	if err := json.NewEncoder(w).Encode(rf); err != nil {
+	if err := json.NewEncoder(w).Encode(f); err != nil {
 		errors.WriteHTTPError(w, errors.NewInternalError("failed to encode response"))
 	}
 }

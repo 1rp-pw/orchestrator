@@ -12,14 +12,17 @@ type FlowTestRequest struct {
 }
 
 type FlowRequest struct {
-	ID       string      `json:"id"`
-	BaseID   string      `json:"baseId"`
-	Tests    interface{} `json:"tests"`
-	Name     string      `json:"name"`
-	FlowYAML string      `json:"flowFlat"`
-	Nodes    interface{} `json:"nodes"`
-	Edges    interface{} `json:"edges"`
-	Flow     FlowConfig
+	ID          string      `json:"id"`
+	BaseID      string      `json:"baseId"`
+	Tests       interface{} `json:"tests"`
+	Name        string      `json:"name"`
+	FlowYAML    string      `json:"flowFlat"`
+	Nodes       interface{} `json:"nodes"`
+	Edges       interface{} `json:"edges"`
+	Description string      `json:"description"`
+	Version     string      `json:"version"`
+	Status      string      `json:"status"`
+	Flow        FlowConfig
 }
 
 type StoredFlow struct {
