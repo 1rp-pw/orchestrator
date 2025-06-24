@@ -189,8 +189,8 @@ CREATE OR REPLACE FUNCTION update_draft_flow(
 BEGIN
     UPDATE flows
     SET
-        p_nodes = COALESCE(p_nodes, nodes),
-        p_edges = COALESCE(p_edges, edges),
+        nodes = COALESCE(p_nodes, nodes),
+        edges = COALESCE(p_edges, edges),
         tests = COALESCE(p_tests, tests),
         flow = COALESCE(p_flow, flow),
         description = COALESCE(p_description, description)

@@ -463,6 +463,9 @@ func (s *System) GetFullFlow(flowId string) (*structs.StoredFlow, error) {
 	if f.VerNull.Valid {
 		f.Version = f.VerNull.String
 	}
+	if f.Status == "draft" {
+		f.IsDraft = true
+	}
 
 	return &f, nil
 }
