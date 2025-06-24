@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/1rp-pw/orchestrator/internal/structs"
+	ConfigBuilder "github.com/keloran/go-config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
-	ConfigBuilder "github.com/keloran/go-config"
 	"gopkg.in/yaml.v3"
 )
 
@@ -41,7 +41,7 @@ func setupTestDatabase(t *testing.T) (*postgres.PostgresContainer, *ConfigBuilde
 	cfg.Database.Details.ConnectionTimeout = 30 * time.Second
 
 	// Wait a bit to ensure database is fully ready
-	time.Sleep(2 * time.Second)
+	time.Sleep(5 * time.Second)
 
 	client, err := cfg.Database.GetPGXPoolClient(ctx)
 	require.NoError(t, err)
