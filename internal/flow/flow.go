@@ -239,8 +239,8 @@ func (s *System) AllFlows() ([]structs.StoredFlow, error) {
 			&d.VersionCount,
 			&d.DraftID,
 			&d.FirstCreatedDate,
-			&d.LatestActivityDate,
 			&d.LatestVersionDate,
+			&d.LatestActivityDate,
 			&d.HasDraft,
 		); err != nil {
 			return ff, logs.Errorf("failed to load flows: %v", err)
