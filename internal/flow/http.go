@@ -160,21 +160,38 @@ func (s *System) UpdateFlow(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sf := structs.StoredFlow{
-		UpdatedAt:  time.Now(),
-		Version:    "draft",
-		Name:       f.Name,
-		Nodes:      f.Nodes,
-		Edges:      f.Edges,
-		FlatYAML:   f.FlowYAML,
-		FlowConfig: f.Flow,
-		Tests:      f.Tests,
-		BaseID:     f.BaseID,
-		FlowID:     f.ID,
+		UpdatedAt:   time.Now(),
+		Version:     "draft",
+		Name:        f.Name,
+		Nodes:       f.Nodes,
+		Edges:       f.Edges,
+		FlatYAML:    f.FlowYAML,
+		FlowConfig:  f.Flow,
+		Tests:       f.Tests,
+		BaseID:      f.BaseID,
+		FlowID:      f.ID,
+		Description: f.Description,
 	}
-	rf, err := s.StoreFlow(&sf)
-	if err != nil {
-		errors.WriteHTTPError(w, err)
-		return
+	if f.Status == "published" {
+		sf.Version = f.Version
+	}
+
+	var rf interface{}
+
+	if f.Status != "draft" {
+		rff, err := s.CreateVersion(&sf)
+		if err != nil {
+			errors.WriteHTTPError(w, err)
+			return
+		}
+		rf = rff
+	} else {
+		rff, err := s.StoreFlow(&sf)
+		if err != nil {
+			errors.WriteHTTPError(w, err)
+			return
+		}
+		rf = rff
 	}
 
 	if err := json.NewEncoder(w).Encode(rf); err != nil {

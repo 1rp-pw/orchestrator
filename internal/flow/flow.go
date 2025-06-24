@@ -378,6 +378,27 @@ func (s *System) StoreFlow(f *structs.StoredFlow) (*structs.StoredFlow, error) {
 	return f, nil
 }
 
+func (s *System) CreateVersion(f *structs.StoredFlow) (*structs.StoredFlow, error) {
+	client, err := s.Config.Database.GetPGXPoolClient(s.Context)
+	if err != nil {
+		return f, logs.Errorf("failed to connect to database: %v", err)
+	}
+	defer client.Close()
+
+	var flowId sql.NullString
+	if err := client.QueryRow(s.Context, `SELECT publish_draft_flow_as_version($1, $2, $3)`, f.BaseID, f.Version, f.Description).Scan(&flowId); err != nil {
+		return nil, logs.Errorf("failed to create version: %v", err)
+	}
+
+	if flowId.Valid {
+		f.FlowID = flowId.String
+	} else {
+		return f, logs.Errorf("failed to create version: %v", err)
+	}
+
+	return f, nil
+}
+
 func (s *System) GetStoredFlow(flowId string) (*structs.FlowConfig, error) {
 	client, err := s.Config.Database.GetPGXPoolClient(s.Context)
 	if err != nil {
