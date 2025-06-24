@@ -77,6 +77,8 @@ func (s *System) CreateFlow(w http.ResponseWriter, r *http.Request) {
 		FlatYAML:   f.FlowYAML,
 		FlowConfig: f.Flow,
 		Tests:      f.Tests,
+		BaseID:     f.BaseID,
+		FlowID:     f.ID,
 	}
 	rf, err := s.StoreInitialFlow(&sf)
 	if err != nil {
@@ -140,6 +142,42 @@ func (s *System) GetFlow(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewEncoder(w).Encode(f); err != nil {
+		errors.WriteHTTPError(w, errors.NewInternalError("failed to encode response"))
+	}
+}
+
+func (s *System) UpdateFlow(w http.ResponseWriter, r *http.Request) {
+	s.SetContext(r.Context())
+
+	var f structs.FlowRequest
+	if err := json.NewDecoder(r.Body).Decode(&f); err != nil {
+		errors.WriteHTTPError(w, errors.NewValidationError("body", "invalid JSON format"))
+		return
+	}
+
+	if err := yaml.Unmarshal([]byte(f.FlowYAML), &f.Flow); err != nil {
+		errors.WriteHTTPError(w, errors.NewValidationError("flow", "invalid YAML flow format"))
+	}
+
+	sf := structs.StoredFlow{
+		UpdatedAt:  time.Now(),
+		Version:    "draft",
+		Name:       f.Name,
+		Nodes:      f.Nodes,
+		Edges:      f.Edges,
+		FlatYAML:   f.FlowYAML,
+		FlowConfig: f.Flow,
+		Tests:      f.Tests,
+		BaseID:     f.BaseID,
+		FlowID:     f.ID,
+	}
+	rf, err := s.StoreFlow(&sf)
+	if err != nil {
+		errors.WriteHTTPError(w, err)
+		return
+	}
+
+	if err := json.NewEncoder(w).Encode(rf); err != nil {
 		errors.WriteHTTPError(w, errors.NewInternalError("failed to encode response"))
 	}
 }
