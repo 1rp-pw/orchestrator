@@ -27,4 +27,5 @@ type EngineResponse struct {
 	Rule   []string    `json:"rule"`
 	Data   interface{} `json:"data"`
 	Error  interface{} `json:"error"`
+	Labels interface{} `json:"labels"`
 }
